@@ -25,6 +25,11 @@ void EventManager::triggerRandomEvent(Board& board) {
     }
 
     if (d_eventsList.empty()) return;
+    int chance = GetRandomValue(1, 100);
+
+    if (chance > d_eventProbability) {
+        return; 
+    }
     int randomIndex = GetRandomValue(0, d_eventsList.size() - 1);
     d_activeEvent = d_eventsList[randomIndex].get();
     d_activeEvent->start(board);

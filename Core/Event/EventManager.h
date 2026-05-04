@@ -21,4 +21,5 @@ private:
     const char* d_currentMessage;
     std::vector<std::unique_ptr<Event>> d_eventsList; 
     Event* d_activeEvent ;
+    int d_eventProbability = 5;
 };
