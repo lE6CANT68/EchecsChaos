@@ -1,0 +1,9 @@
+# Dossiers de compilation
+build/
+out/
+.vscode/
+
+# Fichiers compilés
+*.exe
+*.dll
+*.lib
