@@ -1,0 +1,240 @@
+════════════════════════════════════════════════════════════════════════════════
+                    ANALYSE DES MAUVAISES PRATIQUES - PROJET ECHECS CHAOS
+
+
+
+
+
+
+
+
+═══════════════════════════════════════════════════════════════════════════════
+5. ARCHITECTURE DE POSITION DANGEREUSE
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Core/Base/Position.h
+DESCRIPTION: Position est utilisée comme struct simple avec x, y
+PROBLÈME: Pas de validation, pas de bornes
+SOLUTION: Ajouter une classe Position avec méthodes de validation ou créer une classe Board Position qui valide automatiquement
+
+FICHIER: Core/Base/Board.h
+LIGNE: 18
+ERREUR: getTile() reçoit une Position mais ne valide pas automatiquement
+DESCRIPTION: L'appel à isinBounds() peut échouer silencieusement ou lever une exception
+
+
+═══════════════════════════════════════════════════════════════════════════════
+6. DÉDUPLICATION DE CODE MANQUANTE
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Core/Pieces/Bishop.cpp
+LIGNE: 6-35
+ERREUR: Logique similaire aux autres pièces (Rook, Knight, King)
+DESCRIPTION: Les pièces ont un pattern similaire pour getValidMoves():
+1. Créer un vecteur directions
+2. Pour chaque direction, vérifier les positions
+3. Arrêter si obstacle ou limite du plateau
+
+SOLUTION: Créer une classe utilitaire PieceMovementHelper avec méthodes:
+- calculateSlidingMoves(Position, Board, directions)
+- calculateJumpingMoves(Position, Board, jumps)
+
+FICHIER: Core/Pieces/Knight.cpp
+LIGNE: 8-26
+ERREUR: Même structure que Bishop.cpp
+DESCRIPTION: Knight utilise des jumps fixes, Bishop/Rook utilisent des directions infinies
+
+FICHIER: Graphics/Renderer.cpp
+LIGNE: 25-50
+ERREUR: Boucles similaires sur le plateau (x=0 à width, y=0 à height)
+DESCRIPTION: Au moins 3-4 fonctions utilisent la même boucle double. À refactoriser.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+7. GESTION DE RESSOURCES ET MEMORY LEAKS POTENTIELS
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Core/Audio/AudioManager.cpp
+LIGNE: 17-20
+ERREUR: Ressources raylib chargées mais pas de vérification d'erreur
+DESCRIPTION: LoadSound() peut échouer silencieusement. À ajouter des vérifications
+
+FICHIER: Core/Audio/AudioManager.cpp
+LIGNE: 23
+ERREUR: Destructeur décharge les ressources
+DESCRIPTION: Bonne pratique! Mais pas de RAII sur les Sounds
+
+
+═══════════════════════════════════════════════════════════════════════════════
+8. BUGS DE LOGIQUE ET DEAD CODE
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Core/Audio/AudioManager.cpp
+LIGNE: 27
+ERREUR: void AudioManager::playMusic() const{PlaySound(d_soundCapture);}
+DESCRIPTION: playMusic() appelle PlaySound(d_soundCapture) au lieu de UpdateMusicStream(d_music)
+SOLUTION: Corriger pour utiliser la musique de jeu
+
+FICHIER: Core/Audio/AudioManager.h
+LIGNE: 14
+ERREUR: Méthode playMusic() déclarée mais implémentation est bugée
+DESCRIPTION: À corriger
+
+FICHIER: Core/Time/Chrono.cpp
+LIGNE: 30-37
+ERREUR: Méthode getScrambledTime() return du texte aléatoire
+DESCRIPTION: Cette fonction est bizarre - elle retourne du texte aléatoire au lieu du vrai temps.
+Suspicion: c'est du debug code qui a été oublié?
+SOLUTION: À supprimer ou clarifier son usage
+
+FICHIER: Core/Engine/GameEngine.cpp
+LIGNE: 74
+ERREUR: Condition trop large: if (!this->hasMoved())
+DESCRIPTION: Dans Knight::getValidMoves(), il y a un break qui ne devrait s'exécuter que si on ne peut pas marcher
+SOLUTION: À vérifier la logique du Knight
+
+FICHIER: Core/Pieces/Knight.cpp
+LIGNE: 22
+ERREUR: if (!tile.isWalkable()) { break; }
+DESCRIPTION: Knight ne peut pas sauter par-dessus les obstacles, donc ne devrait pas break silencieusement
+SOLUTION: Continuer à la position suivante au lieu de break
+
+FICHIER: Graphics/UI/PromotionMenu.cpp
+LIGNE: 5
+ERREUR: calcul de d_startX utilise hardcoded 800
+DESCRIPTION: 800 est la largeur supposée de la fenêtre, mais elle est définie à 1000 dans main.cpp
+SOLUTION: Utiliser une vraie constante de fenêtre
+
+
+═══════════════════════════════════════════════════════════════════════════════
+9. INCOHÉRENCE DE TYPES ET CASTING
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Graphics/Renderer.h
+LIGNE: 26
+ERREUR: d_cellSize est float
+DESCRIPTION: Mais utilise avec des int dans drawBoard(), créant des casts implicites
+
+FICHIER: Graphics/Renderer.cpp
+LIGNE: 25, 30, 39, etc.
+ERREUR: Casts (int) multiples et explicites partout
+DESCRIPTION: À unifier: utiliser float partout ou int partout
+
+FICHIER: Graphics/UI/PromotionMenu.cpp
+LIGNE: 5
+ERREUR: calcul de d_startX: (800 - (d_options.size() * d_boxSize)) / 2
+DESCRIPTION: d_options.size() retourne size_t (unsigned), d_boxSize est int
+SOLUTION: Utiliser types cohérents
+
+FICHIER: Core/Event/EventManager.cpp
+LIGNE: 32
+ERREUR: int randomIndex = GetRandomValue(0, d_eventGenerators.size() - 1)
+DESCRIPTION: size_t - 1 peut underflow! À utiliser static_cast<int>
+
+
+═══════════════════════════════════════════════════════════════════════════════
+10. INCLUSIONS CIRCULAIRES ET IMPORTS EXCESSIFS
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Core/Event/Event.h
+LIGNE: 2
+ERREUR: #include "../Base/Board.h" puis ligne 3: #include "../Base/Board.h" (DOUBLON!)
+DESCRIPTION: Board.h inclus deux fois
+
+FICHIER: Core/Engine/GameEngine.h
+LIGNE: 1-26
+ERREUR: 23 includes pour une seule classe!
+DESCRIPTION: Trop d'includes, beaucoup probablement inutiles dans le .h
+- Les Cards, Events, etc. pourraient être forward-declarés
+
+FICHIER: Graphics/Renderer.h
+LIGNE: 1-22
+ERREUR: 15+ includes
+DESCRIPTION: À nettoyer avec forward declarations
+
+SOLUTION: Utiliser forward declarations pour les dépendances, inclure dans le .cpp
+
+
+═══════════════════════════════════════════════════════════════════════════════
+11. MANQUE DE VALIDATION ET GESTION D'ERREURS
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Core/Base/Board.cpp
+LIGNE: 31-36
+ERREUR: getTile() lance std::out_of_range, mais pas toutes les fonctions ne vérulent pas
+DESCRIPTION: Incohérent - isinBounds() est utilisé ici et là mais pas partout
+
+FICHIER: Core/Engine/GameEngine.cpp
+LIGNE: 73
+ERREUR: handleInput() ne valide pas que la pièce sélectionnée existe
+DESCRIPTION: Si getTile(clickedPos).getPiece() == nullptr, ça crash
+
+FICHIER: Core/Base/Player.cpp
+LIGNE: 42
+ERREUR: if (handIndex < 0 || handIndex >= d_hand.size())
+DESCRIPTION: size_t vs int comparison peut être dangereux. Utiliser static_cast
+
+
+═══════════════════════════════════════════════════════════════════════════════
+12. MANQUE DE CONSTANTES POUR LES ÉTATS ET ENUMS
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Core/Engine/GameEngine.h
+LIGNE: 24-29
+ERREUR: enum GameState défini dans le .h
+DESCRIPTION: Pas de problème sauf que les transitions d'état pourraient être centralisées
+
+FICHIER: Core/Event/Event.h
+LIGNE: 5-13
+ERREUR: enum GlobalEffect avec "None" 
+DESCRIPTION: À vérifier si c'est utilisé correctement (n'utiliser pas 0 comme None)
+
+FICHIER: Core/Base/Piece.h
+LIGNE: 10-17
+ERREUR: enum PieceType et PieceColor
+DESCRIPTION: À ajouter des constantes pour les valeurs par défaut
+
+
+═══════════════════════════════════════════════════════════════════════════════
+13. INITIALISATION INCOMPLÈTE ET CONSTRUCTEURS
+═══════════════════════════════════════════════════════════════════════════════
+
+FICHIER: Core/Engine/GameEngine.cpp
+LIGNE: 6-11
+ERREUR: Initialisation du plateau avec d_offsetX assigné à DEFAULT_OFFSETX
+DESCRIPTION: À la ligne 10, d_offsetY est assigné DEFAULT_OFFSETX (BUG!)
+
+FICHIER: Core/Engine/GameEngine.cpp
+LIGNE: 8-10
+ERREUR: DEFAULT_OFFSETX utilisé deux fois au lieu de DEFAULT_OFFSETY
+DESCRIPTION: Copy-paste error
+
+
+════════════════════════════════════════════════════════════════════════════════
+RECOMMANDATIONS PRIORITAIRES
+════════════════════════════════════════════════════════════════════════════════
+
+
+2. URGENT - Corriger playMusic() pour utiliser la vraie musique
+3. URGENT - Corriger la logique de Knight (line 22) pour qu'il ne break pas
+4. Créer un fichier Constants.h avec toutes les constantes
+5. Remplacer Position {-1, -1} par std::optional<Position>
+6. Refactoriser GameEngine en plus petites classes
+7. Nettoyer les includes avec forward declarations
+8. Corriger la méthode getScrambledTime() ou la supprimer
+
+
+════════════════════════════════════════════════════════════════════════════════
+RÉSUMÉ DES PROBLÈMES
+════════════════════════════════════════════════════════════════════════════════
+- ~50 nombres magiques identifiés
+- 1 bug critique (offset Y)
+- 1 bug logique (playMusic)
+- 1 comportement suspect (getScrambledTime)
+- 3+ god classes
+- ~10 instances de mauvaise séparation des responsabilités
+- 2+ bugs de casting et overflow
+- 1+ doublon d'include
+- Manque généralisé de constantes et de validation
+
+════════════════════════════════════════════════════════════════════════════════

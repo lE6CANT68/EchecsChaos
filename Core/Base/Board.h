@@ -30,5 +30,5 @@ class Board{
         std::vector<std::vector<Tile>> d_grid;
         int d_width;
         int d_height;
-        Position d_enPassantTarget = {-1, -1};
+        Position d_enPassantTarget = Position::NONE;
 };

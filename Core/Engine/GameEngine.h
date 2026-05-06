@@ -20,6 +20,12 @@
 #include "../Core/CardsList/PawnSprintCard.h"
 #include "../Core/CardsList/FreezeCard.h"
 #include "../Core/CardsList/FogCard.h"
+#include "../Core/CardsList/HideTimeCard.h"
+
+#include "SpecialMoveHandler.h"
+#include "MoveValidator.h"
+#include "PromotionHandler.h"
+#include "BoardInteractionManager.h"
 
 enum class GameState {
     Playing,
@@ -30,7 +36,7 @@ enum class GameState {
 
 class GameEngine {
 public:
-    GameEngine(int cellSize = Renderer::CELL_SIZE);
+    GameEngine(int cellSize = Config::Graphics::CELL_SIZE);
     void run();
     
 
@@ -40,7 +46,7 @@ private:
     Board d_board;
     Renderer d_renderer;
     bool d_isPromoting = false;
-    Position d_promotionPos = {-1, -1};
+    Position d_promotionPos = Position::NONE;
 
    // PieceColor d_currentTurn;
     Position d_selectedTile;
@@ -69,19 +75,17 @@ private:
 
     void initBoard();
     void handleInput(Position clickedPos);
-    void handleCastling(Position startPos, Position targetPos);
 
-    void handleEnPassant(Position startPos, Position targetPos);
-    void updateEnPassantTarget(Position startPos, Position targetPos);
 
-    bool checkPromotion(Position targetPos);
-    void handlePromotion(int mouseX, int mouseY);
-
-    std::vector<Position> filterLegalMoves(Position startPos, const std::vector<Position>& pseudoMoves);
     void updateGameState();
+    void updateSystems();
+    void processInput();
+    void renderFrame();
 
     void fillPlayerHand(Player& player);
     std::unique_ptr<Card> generateRandomCard();
+
+    const char* getPlayerTimeString(int playerIndex);
 
 
 

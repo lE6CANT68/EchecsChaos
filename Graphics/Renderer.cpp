@@ -1,6 +1,6 @@
 #include "Renderer.h"
 
-Renderer::Renderer(float cellSize) : d_cellSize{cellSize}, d_offsetX{DEFAULT_OFFSETX} ,d_offsetY{DEFAULT_OFFSETY} {
+Renderer::Renderer(float cellSize) : d_cellSize{cellSize}, d_offsetX{Config::Graphics::DEFAULT_OFFSETX}, d_offsetY{Config::Graphics::DEFAULT_OFFSETY} {
     d_drawers[PieceType::Pawn] = std::make_unique<PawnDrawer>();
     d_drawers[PieceType::Bishop] = std::make_unique<BishopDrawer>();
     d_drawers[PieceType::Knight] = std::make_unique<KnightDrawer>();
@@ -92,12 +92,12 @@ void Renderer::drawTileHighlights(Position selectedPos, Position kingInCheckPos)
     if (selectedPos.x != -1 && selectedPos.y != -1) {
         float posX = d_offsetX + (selectedPos.x * d_cellSize);
         float posY = d_offsetY + (selectedPos.y * d_cellSize);
-        DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, HIGHLIGHT_COLOR); 
+        DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, Config::Colors::HIGHLIGHT_COLOR); 
     }
     if (kingInCheckPos.x != -1 && kingInCheckPos.y != -1) {
         float posX = d_offsetX + (kingInCheckPos.x * d_cellSize);
         float posY = d_offsetY + (kingInCheckPos.y * d_cellSize);
-        DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, { 220, 20, 20, 180 }); 
+        DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, Config::Colors::CHECK_HIGHLIGHT_COLOR); 
     }
 }
 void Renderer::drawMoveHints(const Board& board, const std::vector<Position>& validMoves) {
@@ -107,23 +107,27 @@ void Renderer::drawMoveHints(const Board& board, const std::vector<Position>& va
         if (board.getTile(move).hasPiece() || move == board.getEnPassantTarget()) {
             DrawRing({centerX, centerY}, d_cellSize/2.0f - 8.0f, d_cellSize/2.0f - 2.0f, 0, 360, 32, {0, 0, 0, 100});
         } else {
-            DrawCircle((int)centerX, (int)centerY, VALID_MOVE_RADIUS, HINT_COLOR);
+            DrawCircle((int)centerX, (int)centerY, VALID_MOVE_RADIUS, Config::Colors::HINT_COLOR);
         }
     }
 }
 void Renderer::drawPromotionMenu(PieceColor color, const PromotionMenu& menu) const {
-    DrawRectangle(0, 0, 800, 800, { 0, 0, 0, 150 }); 
+    DrawRectangle(0, 0, Config::Graphics::CONFIG_WINDOW_WIDTH, Config::Graphics::CONFIG_WINDOW_HEIGHT, { 0, 0, 0, 150 }); 
 
     float boxSize = (float)menu.getBoxSize();
-    float startX = (float)menu.getStartX();
+    float startX = (float)menu.getStartX(); // <-- Il récupère la valeur centrée (ex: 300)
     float startY = (float)menu.getStartY();
     const auto& options = menu.getOptions();
 
-    DrawRectangle((int)startX, (int)startY, (int)(boxSize * options.size()), (int)boxSize, LIGHTGRAY);
-    DrawRectangleLines((int)startX, (int)startY, (int)(boxSize * options.size()), (int)boxSize, BLACK);
+    float menuWidth = options.size() * boxSize;
+
+    // Dessin de la barre grise
+    DrawRectangle((int)startX, (int)startY, (int)menuWidth, (int)boxSize, LIGHTGRAY);
+    DrawRectangleLines((int)startX, (int)startY, (int)menuWidth, (int)boxSize, BLACK);
 
     Color pieceColor = (color == PieceColor::White) ? WHITE : Color{ 40, 40, 40, 255 };
 
+    // Dessin des pièces
     for (size_t i = 0; i < options.size(); ++i) {
         float xPos = startX + (i * boxSize) + (boxSize / 2.0f);
         float yPos = startY + (boxSize / 2.0f);
@@ -213,7 +217,7 @@ void Renderer::drawFogLayer(const Board& board, Position selectedTile, const std
                 if (!isRevealed) {
                     float cornerX = d_offsetX + (x * d_cellSize);
                     float cornerY = d_offsetY + (y * d_cellSize);
-                    DrawRectangle((int)cornerX, (int)cornerY, (int)d_cellSize, (int)d_cellSize, {15, 15, 15, 255});
+                    DrawRectangle((int)cornerX, (int)cornerY, (int)d_cellSize, (int)d_cellSize, Config::Colors::FOG_COLOR);
                     DrawText("?", cornerX + d_cellSize/2 - 10, cornerY + d_cellSize/2 - 15, 30, DARKGRAY);
                 }
             }

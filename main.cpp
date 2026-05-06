@@ -1,10 +1,11 @@
 #include "raylib.h"
 #include "../Core/Engine/GameEngine.h"
+#include "../Core/Config/Constant.h"
 
 int main() {
-    InitWindow(1000, 1000, "Echecs Chaos - v0.2");
+    InitWindow(Config::Graphics::CONFIG_WINDOW_WIDTH, Config::Graphics::CONFIG_WINDOW_HEIGHT, "Echecs Chaos - v0.2");
     InitAudioDevice();
-    SetTargetFPS(60);
+    SetTargetFPS(Config::Graphics::CONFIG_TARGET_FPS);
     {
         GameEngine engine; 
         engine.run(); 

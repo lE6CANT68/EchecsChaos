@@ -51,7 +51,7 @@ Position Board::getEnPassantTarget() const {
 void Board::setEnPassantTarget(Position target) { 
     d_enPassantTarget = target;
  }
- Position Board::getKingPosition(PieceColor color) const {
+Position Board::getKingPosition(PieceColor color) const {
     for (int x = 0; x < d_width; ++x) {
         for (int y = 0; y < d_height; ++y) {
             const Tile& tile = getTile({x, y});
@@ -62,12 +62,10 @@ void Board::setEnPassantTarget(Position target) {
             }
         }
     }
-    return {-1, -1}; 
+    throw std::runtime_error("CRASH MOTEUR : Le Roi est introuvable sur le plateau !");
 }
 bool Board::isKingInCheck(PieceColor kingColor) const {
     Position kingPos = getKingPosition(kingColor);
-    if (kingPos.x == -1) return false; 
-
     for (int x = 0; x < d_width; ++x) {
         for (int y = 0; y < d_height; ++y) {
             const Tile& tile = getTile({x, y});
@@ -75,7 +73,7 @@ bool Board::isKingInCheck(PieceColor kingColor) const {
                 std::vector<Position> enemyMoves = tile.getPiece()->getValidMoves({x, y}, *this);
                 
                 for (const Position& move : enemyMoves) {
-                    if (move.x == kingPos.x && move.y == kingPos.y) {
+                    if (move == kingPos) {
                         return true; 
                     }
                 }

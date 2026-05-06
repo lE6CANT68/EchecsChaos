@@ -17,6 +17,7 @@ public:
     
 
     const char* getFormattedTime() const; 
+    const char* getScrambledTime() const;
 
 private:
     float d_timeRemaining;

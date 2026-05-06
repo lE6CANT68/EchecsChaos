@@ -26,5 +26,5 @@ public:
     virtual int getCost() const = 0; 
     virtual bool requiresTarget() const { return false; }
 
-    virtual void play(Player& player, Board& board, EventManager& eventManager, Position target = {-1, -1}) = 0;
+    virtual void play(Player& player, Board& board, EventManager& eventManager, Position target = Position::NONE) = 0;
 };

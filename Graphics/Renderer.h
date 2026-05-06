@@ -17,18 +17,17 @@
 
 #include "CardRenderer.h"
 
+#include "../Core/Config/Constant.h"
+
 
 
 
 class Renderer {
 public:
-    Renderer(float cellSize = CELL_SIZE);
-    static constexpr float CELL_SIZE = 80.0f;
-    static constexpr int DEFAULT_OFFSETX = 200.0f;
-    static constexpr int DEFAULT_OFFSETY = 200.0f;
+    Renderer(float cellSize);
 
 
-    void draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,Position kingInCheckPos = {-1, -1});
+    void draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,Position kingInCheckPos = Position::NONE);
     void drawPromotionMenu(PieceColor color,const PromotionMenu& menu) const;
     void drawChrono(const char* whiteTime, const char* blackTime, PieceColor currentTurn, int offsetX, int offsetY);
     void drawEffects(const std::vector<VisualEffect>& effects);
@@ -41,8 +40,8 @@ public:
 
 private:
     float d_cellSize;
-    int d_offsetX;
-    int d_offsetY;
+    float d_offsetX;
+    float d_offsetY;
 
     std::map<PieceType, std::unique_ptr<PieceDrawer>> d_drawers;
 
@@ -63,8 +62,7 @@ private:
 
     static constexpr float FALLBACK_PIECE_RADIUS = 20.0f;
     static constexpr float VALID_MOVE_RADIUS = 15.0f;
-    static constexpr Color HIGHLIGHT_COLOR = { 46, 204, 113, 150 }; 
-    static constexpr Color HINT_COLOR = { 0, 0, 0, 70 };
+
 
     CardRenderer d_cardRenderer;
 };

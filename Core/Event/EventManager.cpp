@@ -7,16 +7,20 @@ EventManager::EventManager(const AudioManager& audio)
 {
     d_eventGenerators.push_back([this]() {
         return std::make_unique<MeteoriteEvent>(this->d_audio);
-   });
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<FreezeEvent>(Position{-1, -1}, 3, this->d_audio);
     });
     d_eventGenerators.push_back([this]() {
-        return std::make_unique<ObstacleEvent>(Position{-1, -1}, 4, this->d_audio);
+        return std::make_unique<FreezeEvent>(Position::NONE, Config::Event::FREEZE_EVENT_DURATION, this->d_audio);
     });
-        d_eventGenerators.push_back([this]() {
-        return std::make_unique<FogEvent>(Position{-1, -1}, 4, this->d_audio);
+    d_eventGenerators.push_back([this]() {
+        return std::make_unique<ObstacleEvent>(Position::NONE, Config::Event::OBSTACLE_EVENT_DURATION, this->d_audio);
     });
+    d_eventGenerators.push_back([this]() {
+        return std::make_unique<FogEvent>(Position::NONE, Config::Event::FOG_EVENT_DURATION, this->d_audio);
+    });
+    d_eventGenerators.push_back([this]() {
+        return std::make_unique<HideTimeEvent>(PlayerTarget::Both, Config::Event::HIDE_TIME_EVENT_DURATION, this->d_audio);
+    });
+    
 }
 
 void EventManager::update() {
@@ -55,7 +59,7 @@ void EventManager::addEvent(Board& board, std::unique_ptr<Event> newEvent) {
     newEvent->start(board); 
     
     d_currentMessage = newEvent->getMessage();
-    d_messageTimer = 4.0f;
+    d_messageTimer = Config::Graphics::MESSAGE_DISPLAY_TIME;
 
     d_activeEvents.push_back(std::move(newEvent));
 }
@@ -69,4 +73,11 @@ std::vector<VisualEffect> EventManager::getActiveVisualEffects() const {
     }
     
     return allEffects;
+}
+bool EventManager::hasGlobalEffect(GlobalEffect effect) const {
+    if (effect == GlobalEffect::None) return false;
+    for (const auto& event : d_activeEvents) {
+        if (event->getGlobalEffect() == effect) return true;
+    }
+    return false;
 }

@@ -11,6 +11,7 @@
 #include "../Core/Event/EventList/FreezeEvent.h"
 #include "../Core/Event/EventList/ObstacleEvent.h"
 #include "../Core/Event/EventList/FogEvent.h"
+#include "../Core/Event/EventList/HideTimeEvent.h"
 
 class EventManager {
 public:
@@ -31,6 +32,8 @@ public:
     void setEventProbability(int proba) { d_eventProbability = proba; }
 
     const AudioManager& getAudio() const { return d_audio; }
+
+    bool hasGlobalEffect(GlobalEffect effect) const;
 
 private:
     float d_messageTimer;

@@ -1,6 +1,4 @@
 #include "AudioManager.h"
-#include "../Core/Config/AudioPath.h"
-
 AudioManager::AudioManager() {
     d_soundMove = LoadSound(Audiopath::SOUND_MOVE);
     d_soundCapture = LoadSound(Audiopath::SOUND_CAPTURE);
@@ -10,7 +8,7 @@ AudioManager::AudioManager() {
     d_soundStalemate =LoadSound(Audiopath::SOUND_STALEMATE);
     d_music = LoadMusicStream(Audiopath::GAME_MUSIC);
     
-    d_volume = 0.4f;
+    d_volume = Config::Audio::DEFAULT_MUSIC_VOLUME;
     SetMusicVolume(d_music, d_volume); //chnager pour pas fixer
     PlayMusicStream(d_music);      
 }

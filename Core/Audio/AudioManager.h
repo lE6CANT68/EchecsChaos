@@ -1,5 +1,7 @@
 #pragma once
 #include "raylib.h"
+#include "../Core/Config/AudioPath.h"
+#include "../Config/Constant.h"
 
 class AudioManager {
 public:
