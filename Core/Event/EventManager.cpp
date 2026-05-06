@@ -1,9 +1,22 @@
 #include "EventManager.h"
-#include "../Core/Event/EventList/MeteoriteEvent.h"
 
-EventManager::EventManager(const AudioManager& audio) : d_messageTimer(0.0f), d_currentMessage(""),d_activeEvent{nullptr} {
+#include "raylib.h"
 
-    d_eventsList.push_back(std::make_unique<MeteoriteEvent>(audio));
+EventManager::EventManager(const AudioManager& audio) 
+    : d_messageTimer(0.0f), d_currentMessage(""), d_audio(audio) 
+{
+    d_eventGenerators.push_back([this]() {
+        return std::make_unique<MeteoriteEvent>(this->d_audio);
+   });
+    d_eventGenerators.push_back([this]() {
+        return std::make_unique<FreezeEvent>(Position{-1, -1}, 3, this->d_audio);
+    });
+    d_eventGenerators.push_back([this]() {
+        return std::make_unique<ObstacleEvent>(Position{-1, -1}, 4, this->d_audio);
+    });
+        d_eventGenerators.push_back([this]() {
+        return std::make_unique<FogEvent>(Position{-1, -1}, 4, this->d_audio);
+    });
 }
 
 void EventManager::update() {
@@ -13,33 +26,47 @@ void EventManager::update() {
 bool EventManager::hasActiveMessage() const { return d_messageTimer > 0.0f; }
 const char* EventManager::getActiveMessage() const { return d_currentMessage; }
 
-void EventManager::triggerRandomEvent(Board& board) {
-    if (d_activeEvent != nullptr) {
-        d_activeEvent->step(board);
-        d_currentMessage = d_activeEvent->getMessage();
-        d_messageTimer = 4.0f;
-        if (d_activeEvent->isFinished()) {
-            d_activeEvent = nullptr; 
+void EventManager::processActiveEvents(Board& board) {
+    for (auto it = d_activeEvents.begin(); it != d_activeEvents.end(); ) {
+        (*it)->step(board); 
+
+        if ((*it)->isFinished()) {
+            it = d_activeEvents.erase(it);
+        } else {
+            ++it;
         }
-        return; 
     }
+}
 
-    if (d_eventsList.empty()) return;
+void EventManager::triggerRandomEvent(Board& board) {
+    if (d_eventGenerators.empty()) return;
+
     int chance = GetRandomValue(1, 100);
-
     if (chance > d_eventProbability) {
         return; 
     }
-    int randomIndex = GetRandomValue(0, d_eventsList.size() - 1);
-    d_activeEvent = d_eventsList[randomIndex].get();
-    d_activeEvent->start(board);
-    d_currentMessage = d_activeEvent->getMessage();
-    d_messageTimer = 4.0f; 
+
+    int randomIndex = GetRandomValue(0, d_eventGenerators.size() - 1);
+
+    std::unique_ptr<Event> newEvent = d_eventGenerators[randomIndex]();
+    addEvent(board, std::move(newEvent));
+}
+void EventManager::addEvent(Board& board, std::unique_ptr<Event> newEvent) {
+    newEvent->start(board); 
+    
+    d_currentMessage = newEvent->getMessage();
+    d_messageTimer = 4.0f;
+
+    d_activeEvents.push_back(std::move(newEvent));
 }
 
 std::vector<VisualEffect> EventManager::getActiveVisualEffects() const {
-    if (d_activeEvent != nullptr) {
-        return d_activeEvent->getActiveEffects();
+    std::vector<VisualEffect> allEffects;
+
+    for (const auto& event : d_activeEvents) {
+        auto effects = event->getActiveEffects();
+        allEffects.insert(allEffects.end(), effects.begin(), effects.end());
     }
-    return {};
+    
+    return allEffects;
 }

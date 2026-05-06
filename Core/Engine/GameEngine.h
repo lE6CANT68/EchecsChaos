@@ -4,8 +4,22 @@
 #include "../Graphics/UI/PromotionMenu.h"
 #include "raylib.h"
 #include "../Core/Audio/AudioManager.h"
-#include "../Core/Time/Chono.h"
+#include "../Core/Time/Chrono.h"
 #include "../Core/Event/EventManager.h"
+#include "../Base/Player.h"
+#include "../Core/Pieces/Pawn.h"
+#include "../Core/Pieces/Rook.h"
+#include "../Core/Pieces/Knight.h"
+#include "../Core/Pieces/Bishop.h"
+#include "../Core/Pieces/Queen.h"
+#include "../Core/Pieces/King.h"
+
+#include "../Core/CardsList/MeteoriteCard.h"
+#include "../Core/CardsList/TimeCard.h"
+#include "../Core/CardsList/BlockCard.h"
+#include "../Core/CardsList/PawnSprintCard.h"
+#include "../Core/CardsList/FreezeCard.h"
+#include "../Core/CardsList/FogCard.h"
 
 enum class GameState {
     Playing,
@@ -28,12 +42,15 @@ private:
     bool d_isPromoting = false;
     Position d_promotionPos = {-1, -1};
 
-    PieceColor d_currentTurn;
+   // PieceColor d_currentTurn;
     Position d_selectedTile;
     std::vector<Position> d_currentValidMoves;
 
     int d_cellSize;
-    int d_margin;
+    int d_offsetX;
+    int d_offsetY;
+    bool d_isTargeting = false;
+    int d_pendingCardIndex = -1;
 
     PromotionMenu d_promotionMenu;
     std::vector<PieceType> d_promotionOptions;
@@ -47,8 +64,8 @@ private:
     AudioManager d_audioManager;
     EventManager d_eventManager;
 
-    Chrono d_whiteClock; 
-    Chrono d_blackClock;
+    std::vector<Player> d_players;
+    int d_currentPlayerIndex;
 
     void initBoard();
     void handleInput(Position clickedPos);
@@ -62,5 +79,10 @@ private:
 
     std::vector<Position> filterLegalMoves(Position startPos, const std::vector<Position>& pseudoMoves);
     void updateGameState();
+
+    void fillPlayerHand(Player& player);
+    std::unique_ptr<Card> generateRandomCard();
+
+
 
 };

@@ -2,7 +2,7 @@
 #include "../Core/Engine/GameEngine.h"
 
 int main() {
-    InitWindow(800, 800, "Echecs Chaos - V0.1");
+    InitWindow(1000, 1000, "Echecs Chaos - v0.2");
     InitAudioDevice();
     SetTargetFPS(60);
     {

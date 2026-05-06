@@ -6,18 +6,19 @@ enum class TileType {
     Normal,
     Lava,
     Ice,
+    Blocked,
+    Frozen,
 };
 
 class Tile {
 
     public:
-        Tile() : d_type(TileType::Normal) {}
+        Tile() : d_type(TileType::Normal),d_isFoggy{false} {}
 
         TileType getType() const { return d_type; }
         void setType(TileType newType) { d_type = newType; }
 
         bool hasPiece()const {return d_currentPiece !=nullptr;}
-
         Piece* getPiece()const{return d_currentPiece.get();}
 
         void setPiece(std::unique_ptr<Piece> p) { d_currentPiece = std::move(p); }
@@ -26,10 +27,15 @@ class Tile {
 
         std::unique_ptr<Piece> releasePiece() {return std::move(d_currentPiece); }
 
+        bool isWalkable() const {return d_type != TileType::Blocked && d_type!= TileType::Frozen;}
+        bool isFoggy() const { return d_isFoggy; }
+        void setFoggy(bool fog) { d_isFoggy = fog; }
+        
         
 
 
     private:
         TileType d_type;
         std::unique_ptr<Piece> d_currentPiece; 
+        bool d_isFoggy;
 };

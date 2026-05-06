@@ -1,4 +1,4 @@
-#include "../Core/Time/Chono.h"
+#include "Chrono.h"
 
 Chrono::Chrono(float initialTimeMinutes, float incrementSeconds) {
     d_timeRemaining = initialTimeMinutes * 60.0f; 
@@ -31,3 +31,4 @@ void Chrono::setTime(float newTime){
 void Chrono::setIncrement(float newIncrement){
     d_increment = newIncrement;
 }
+void Chrono::addTime(float seconds) { d_timeRemaining += seconds; };
