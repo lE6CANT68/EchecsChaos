@@ -5,18 +5,21 @@
 EventManager::EventManager(const AudioManager& audio) 
     : d_messageTimer(0.0f), d_currentMessage(""), d_audio(audio) 
 {
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<MeteoriteEvent>(this->d_audio);
+   // d_eventGenerators.push_back([this]() {
+    //    return std::make_unique<MeteoriteEvent>(this->d_audio);
+   //});
+   d_eventGenerators.push_back([this]() {
+        return std::make_unique<IdiotEvent>(this->d_audio);
    });
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<FreezeEvent>(Position{-1, -1}, 3, this->d_audio);
-    });
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<ObstacleEvent>(Position{-1, -1}, 4, this->d_audio);
-    });
-        d_eventGenerators.push_back([this]() {
-        return std::make_unique<FogEvent>(Position{-1, -1}, 4, this->d_audio);
-    });
+    //d_eventGenerators.push_back([this]() {
+    //    return std::make_unique<FreezeEvent>(Position{-1, -1}, 3, this->d_audio);
+    //});
+    //d_eventGenerators.push_back([this]() {
+    //    return std::make_unique<ObstacleEvent>(Position{-1, -1}, 4, this->d_audio);
+    //});
+        //d_eventGenerators.push_back([this]() {
+       // return std::make_unique<FogEvent>(Position{-1, -1}, 4, this->d_audio);
+  //  });
 }
 
 void EventManager::update() {
@@ -24,7 +27,7 @@ void EventManager::update() {
 }
 
 bool EventManager::hasActiveMessage() const { return d_messageTimer > 0.0f; }
-const char* EventManager::getActiveMessage() const { return d_currentMessage; }
+const char* EventManager::getActiveMessage() const { return d_currentMessage.c_str(); }
 
 void EventManager::processActiveEvents(Board& board) {
     for (auto it = d_activeEvents.begin(); it != d_activeEvents.end(); ) {

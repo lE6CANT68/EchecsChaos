@@ -52,6 +52,9 @@ public:
     bool isFinished() const override { return !d_isActive; }
     const char* getMessage() const override { return d_message; }
 
+    EventRarity getRarity() const override {
+        return EventRarity::Common; 
+    }
 private:
     Position d_target;
     int d_duration;

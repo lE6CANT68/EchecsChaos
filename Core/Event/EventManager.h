@@ -11,6 +11,7 @@
 #include "../Core/Event/EventList/FreezeEvent.h"
 #include "../Core/Event/EventList/ObstacleEvent.h"
 #include "../Core/Event/EventList/FogEvent.h"
+#include "../Core/Event/EventList/IdiotEvent.h"
 
 class EventManager {
 public:
@@ -33,14 +34,13 @@ public:
     const AudioManager& getAudio() const { return d_audio; }
 
 private:
-    float d_messageTimer;
-    const char* d_currentMessage;
-
+    float d_messageTimer = 0.0f;
+    std::string d_currentMessage = "";
     std::vector<std::unique_ptr<Event>> d_activeEvents;
 
     std::vector<std::function<std::unique_ptr<Event>()>> d_eventGenerators;
 
-    int d_eventProbability = 0; 
+    int d_eventProbability = 100; 
 
     const AudioManager& d_audio; 
 };

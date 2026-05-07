@@ -32,6 +32,10 @@ public:
         return d_message; 
     }
 
+    EventRarity getRarity() const override {
+        return EventRarity::Epic; 
+    }
+
 private:
     Player& d_targetPlayer;
     float d_timeToAdd;

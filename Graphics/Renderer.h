@@ -12,6 +12,7 @@
 #include "Pieces/RookDrawer.h"
 #include "Pieces/KingDrawer.h"
 #include "Pieces/QueenDrawer.h"
+#include "Pieces/IdiotDrawer.h"
 #include "../Graphics/UI/PromotionMenu.h"
 #include "../Graphics/VisualEffect.h"
 

@@ -7,6 +7,7 @@ Renderer::Renderer(float cellSize) : d_cellSize{cellSize}, d_offsetX{DEFAULT_OFF
     d_drawers[PieceType::Rook] = std::make_unique<RookDrawer>();
     d_drawers[PieceType::King] = std::make_unique<KingDrawer>();
     d_drawers[PieceType::Queen] = std::make_unique<QueenDrawer>();
+    d_drawers[PieceType::Idiot] = std::make_unique<IdiotDrawer>(); 
 }
 
 void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,Position kingInCheckPos) {

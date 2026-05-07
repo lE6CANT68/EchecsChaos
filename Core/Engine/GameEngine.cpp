@@ -115,7 +115,7 @@ void GameEngine::handleInput(Position clickedPos) {
 
     if (!moveExecuted) {
         const Tile& tile = d_board.getTile(clickedPos);
-        if (tile.hasPiece() && tile.getPiece()->getColor() == currentColor) {
+        if (tile.hasPiece() && (tile.getPiece()->getColor() == currentColor || tile.getPiece()->getType() == PieceType::Idiot)) {
             d_selectedTile = clickedPos;
             std::vector<Position> pseudoMoves = tile.getPiece()->getValidMoves(clickedPos, d_board);
             d_currentValidMoves = filterLegalMoves(clickedPos, pseudoMoves);
@@ -253,13 +253,17 @@ void GameEngine::updateGameState() {
 std::vector<Position> GameEngine::filterLegalMoves(Position startPos, const std::vector<Position>& pseudoMoves) {
     std::vector<Position> legalMoves;
     Piece* myPiece = d_board.getTile(startPos).getPiece();
-    PieceColor myColor = myPiece->getColor();
+    PieceColor myColor = d_players[d_currentPlayerIndex].getColor();
 
     bool isKing = (myPiece->getType() == PieceType::King);
     bool currentlyInCheck = d_board.isKingInCheck(myColor);
 
     for (const Position& targetPos : pseudoMoves) {
         
+        if (d_board.getTile(targetPos).hasPiece() && d_board.getTile(targetPos).getPiece()->getColor() == myColor) {
+            continue; 
+        }
+
         if (isKing && abs(targetPos.x - startPos.x) == 2) {
             if (currentlyInCheck) continue; 
             int step = (targetPos.x > startPos.x) ? 1 : -1; 
