@@ -148,7 +148,7 @@ void GameEngine::run() {
 }
 std::unique_ptr<Card> GameEngine::generateRandomCard() {
     int roll = GetRandomValue(0, 6); 
-    roll = 6;
+   // roll = 6;
     switch (roll) {
         case 0: return std::make_unique<MeteoriteCard>();
         case 1: return std::make_unique<TimeCard>();
@@ -179,8 +179,6 @@ const char* GameEngine::getPlayerTimeString(int playerIndex) {
         isHacked = d_eventManager.hasGlobalEffect(GlobalEffect::HideTimeBlack) || 
                    d_eventManager.hasGlobalEffect(GlobalEffect::HideTimeBoth);
     }
-
-    // On renvoie le bon texte
     if (isHacked) {
         return d_players[playerIndex].getClock().getScrambledTime();
     } 
@@ -302,7 +300,7 @@ void GameEngine::renderFrame() {
         }
         
         if (d_gameState != GameState::Playing) {
-            DrawRectangle(0, 0, 800, 800, { 0, 0, 0, 200 }); 
+            DrawRectangle(0, 0, Config::Graphics::CONFIG_WINDOW_HEIGHT, Config::Graphics::CONFIG_WINDOW_WIDTH, { 0, 0, 0, 200 }); 
             const char* message = "";
             if (d_gameState == GameState::WhiteWins) message = "LES BLANCS GAGNENT !"; 
             if (d_gameState == GameState::BlackWins) message = "LES NOIRS GAGNENT !";  

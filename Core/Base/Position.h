@@ -11,7 +11,6 @@ struct Position {
         return x != p.x || y != p.y;
     }
 
-    // 1. On annonce juste la constante (sans lui donner de valeur ici)
     static const Position NONE;
 
     bool isValid() const {

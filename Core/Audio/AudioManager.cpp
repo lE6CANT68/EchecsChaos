@@ -22,7 +22,7 @@ AudioManager::~AudioManager() {
 
 void AudioManager::playMove() const { PlaySound(d_soundMove); }
 void AudioManager::playCapture() const { PlaySound(d_soundCapture); }
-void AudioManager::playMusic() const{PlaySound(d_soundCapture);}
+void AudioManager::playMusic() const{PlayMusicStream(d_music);}
 void AudioManager::playGameOver() const{PlaySound(d_soundGameOver);}
 void AudioManager::playVictory() const{PlaySound(d_soundVictory);}
 void AudioManager::playStalemate() const{PlaySound(d_soundStalemate);}

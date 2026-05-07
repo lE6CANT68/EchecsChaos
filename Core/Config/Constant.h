@@ -4,12 +4,13 @@
 namespace Config{
     namespace Graphics{
         constexpr int CONFIG_WINDOW_WIDTH = 1000;
-        constexpr int CONFIG_WINDOW_HEIGHT = 1000;
+        constexpr int CONFIG_WINDOW_HEIGHT = 800;
         constexpr int CONFIG_TARGET_FPS = 60;
 
         constexpr float CELL_SIZE = 80.0f;
-        constexpr float DEFAULT_OFFSETX = 200.0f;
-        constexpr float DEFAULT_OFFSETY = 200.0f;
+        constexpr float BOARD_PIXEL_SIZE = CELL_SIZE * 8.0f;
+        constexpr float DEFAULT_OFFSETX = (CONFIG_WINDOW_WIDTH - BOARD_PIXEL_SIZE) / 2.0f;
+        constexpr float DEFAULT_OFFSETY = (CONFIG_WINDOW_HEIGHT - BOARD_PIXEL_SIZE) / 2.0f;
 
         constexpr int  PROMOTION_MENU_WIDTH = 1000;
         constexpr int  PROMOTION_MENU_HEIGHT = 1000;

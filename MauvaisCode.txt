@@ -3,26 +3,6 @@
 
 
 
-
-
-
-
-
-═══════════════════════════════════════════════════════════════════════════════
-5. ARCHITECTURE DE POSITION DANGEREUSE
-═══════════════════════════════════════════════════════════════════════════════
-
-FICHIER: Core/Base/Position.h
-DESCRIPTION: Position est utilisée comme struct simple avec x, y
-PROBLÈME: Pas de validation, pas de bornes
-SOLUTION: Ajouter une classe Position avec méthodes de validation ou créer une classe Board Position qui valide automatiquement
-
-FICHIER: Core/Base/Board.h
-LIGNE: 18
-ERREUR: getTile() reçoit une Position mais ne valide pas automatiquement
-DESCRIPTION: L'appel à isinBounds() peut échouer silencieusement ou lever une exception
-
-
 ═══════════════════════════════════════════════════════════════════════════════
 6. DÉDUPLICATION DE CODE MANQUANTE
 ═══════════════════════════════════════════════════════════════════════════════
@@ -65,45 +45,7 @@ ERREUR: Destructeur décharge les ressources
 DESCRIPTION: Bonne pratique! Mais pas de RAII sur les Sounds
 
 
-═══════════════════════════════════════════════════════════════════════════════
-8. BUGS DE LOGIQUE ET DEAD CODE
-═══════════════════════════════════════════════════════════════════════════════
 
-FICHIER: Core/Audio/AudioManager.cpp
-LIGNE: 27
-ERREUR: void AudioManager::playMusic() const{PlaySound(d_soundCapture);}
-DESCRIPTION: playMusic() appelle PlaySound(d_soundCapture) au lieu de UpdateMusicStream(d_music)
-SOLUTION: Corriger pour utiliser la musique de jeu
-
-FICHIER: Core/Audio/AudioManager.h
-LIGNE: 14
-ERREUR: Méthode playMusic() déclarée mais implémentation est bugée
-DESCRIPTION: À corriger
-
-FICHIER: Core/Time/Chrono.cpp
-LIGNE: 30-37
-ERREUR: Méthode getScrambledTime() return du texte aléatoire
-DESCRIPTION: Cette fonction est bizarre - elle retourne du texte aléatoire au lieu du vrai temps.
-Suspicion: c'est du debug code qui a été oublié?
-SOLUTION: À supprimer ou clarifier son usage
-
-FICHIER: Core/Engine/GameEngine.cpp
-LIGNE: 74
-ERREUR: Condition trop large: if (!this->hasMoved())
-DESCRIPTION: Dans Knight::getValidMoves(), il y a un break qui ne devrait s'exécuter que si on ne peut pas marcher
-SOLUTION: À vérifier la logique du Knight
-
-FICHIER: Core/Pieces/Knight.cpp
-LIGNE: 22
-ERREUR: if (!tile.isWalkable()) { break; }
-DESCRIPTION: Knight ne peut pas sauter par-dessus les obstacles, donc ne devrait pas break silencieusement
-SOLUTION: Continuer à la position suivante au lieu de break
-
-FICHIER: Graphics/UI/PromotionMenu.cpp
-LIGNE: 5
-ERREUR: calcul de d_startX utilise hardcoded 800
-DESCRIPTION: 800 est la largeur supposée de la fenêtre, mais elle est définie à 1000 dans main.cpp
-SOLUTION: Utiliser une vraie constante de fenêtre
 
 
 ═══════════════════════════════════════════════════════════════════════════════

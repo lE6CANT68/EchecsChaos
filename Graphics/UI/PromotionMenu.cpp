@@ -5,11 +5,7 @@ PromotionMenu::PromotionMenu(const std::vector<PieceType>& options)
       d_boxSize(Config::Graphics::PROMOTION_BOX_SIZE), 
       d_startY(Config::Graphics::PROMOTION_MENU_Y) 
 {
-    // Largeur totale du menu (ex: 4 options * 100px = 400px)
     int menuWidth = (int)d_options.size() * d_boxSize;
-    
-    // Centrage par rapport au plateau (pas à la fenêtre!)
-    // Plateau: commence à offsetX (200) et fait 8 cases * 80px = 640px de large
     int boardStartX = (int)Config::Graphics::DEFAULT_OFFSETX;
     int boardWidth = 8 * (int)Config::Graphics::CELL_SIZE;
     d_startX = boardStartX + (boardWidth - menuWidth) / 2;
