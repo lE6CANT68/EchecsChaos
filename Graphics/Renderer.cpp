@@ -224,3 +224,33 @@ void Renderer::drawScore(int whiteScore, int blackScore) {
     DrawText(TextFormat("Score: %d", whiteScore), 900, 600, 20, GOLD);
     DrawText(TextFormat("Score: %d", blackScore), 900, 200, 20, GOLD);
 }
+void Renderer::drawShop(const Shop& shop, const ShopMenu& menu, bool isShopOpen) {
+    Rectangle btn = getShopButtonBounds();
+    DrawRectangleRec(btn, DARKGRAY);
+    DrawRectangleLinesEx(btn, 2, GOLD);
+    DrawText("BOUTIQUE", btn.x + 15, btn.y + 10, 20, GOLD);
+
+    if (isShopOpen) {
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), { 0, 0, 0, 180 });
+        
+        // On récupère les infos du menu
+        Rectangle panel = { (float)menu.getPanelX(), (float)menu.getPanelY(), (float)menu.getPanelWidth(), (float)menu.getPanelHeight() };
+        DrawRectangleRec(panel, RAYWHITE);
+        DrawRectangleLinesEx(panel, 4, GOLD);
+        
+        DrawText("MARCHE DU CHAOS", menu.getPanelX() + 220, menu.getPanelY() + 20, 30, BLACK);
+
+        const auto& cards = shop.getCards();
+        for (size_t i = 0; i < cards.size(); ++i) {
+            // Calcul de la position X pour cette carte précise
+            int cardX = menu.getStartX() + i * (menu.getCardWidth() + menu.getSpacing());
+            int cardY = menu.getStartY();
+            
+            // Dessine la carte ici (via d_cardRenderer)
+            d_cardRenderer.drawCard(*cards[i], cardX, cardY, false);
+            
+            int price = Shop::getPrice(cards[i]->getRarity());
+            DrawText(TextFormat("%d Points", price), cardX + 10, cardY + menu.getCardHeight() + 10, 20, GOLD);
+        }
+    }
+}

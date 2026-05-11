@@ -1,5 +1,6 @@
 #include "PromotionMenu.h"
 
+
 PromotionMenu::PromotionMenu(const std::vector<PieceType>& options) 
     : d_options(options), 
       d_boxSize(Config::Graphics::PROMOTION_BOX_SIZE), 

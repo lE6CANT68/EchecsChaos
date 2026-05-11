@@ -37,6 +37,7 @@ public:
         if (d_target == PlayerTarget::Black) return GlobalEffect::HideTimeBlack;
         return GlobalEffect::HideTimeBoth;
     }
+    EventRarity getRarity() const override { return EventRarity::Epic; }
 
 private:
     PlayerTarget d_target;

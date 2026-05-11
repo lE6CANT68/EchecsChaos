@@ -62,6 +62,7 @@ void step(Board& board) {
     bool isFinished() const override { return !d_isActive; }
     const char* getMessage() const override { return d_message; }
     GlobalEffect getGlobalEffect() const override { return GlobalEffect::None; }
+    EventRarity getRarity() const override { return EventRarity::Legendary; }
 
 private:
     std::vector<Position> d_wallPositions;

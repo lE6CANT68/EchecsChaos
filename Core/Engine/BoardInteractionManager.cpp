@@ -17,7 +17,8 @@ bool BoardInteractionManager::tryExecuteMove(Board& board, Position clickedPos, 
             SpecialMoveHandler::handleCastling(board, selectedTile, clickedPos);
             SpecialMoveHandler::handleEnPassant(board, selectedTile, clickedPos);
             SpecialMoveHandler::updateEnPassantTarget(board, selectedTile, clickedPos);
-
+            
+            board.setLastMovedPieceType(board.getTile(selectedTile).getPiece()->getType());
             board.movePiece(selectedTile, clickedPos);
             board.getTile(clickedPos).getPiece()->setHasMoved(true);
 

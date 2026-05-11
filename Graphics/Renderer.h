@@ -19,6 +19,9 @@
 
 #include "../Core/Config/Constant.h"
 
+#include "../Core/Engine/Shop.h"
+#include "../Graphics/UI/ShopMenu.h"
+
 
 
 
@@ -33,9 +36,12 @@ public:
     void drawEffects(const std::vector<VisualEffect>& effects);
     void drawHands(const std::vector<Player>& players) const ;
     void drawScore(int whiteScore, int blackScore);
+    void drawShop(const Shop& shop, const ShopMenu& menu, bool isShopOpen);
     
 
     int getClickedCardIndex(int playerIndex, int numCards, int mouseX, int mouseY) const;
+    Rectangle getShopButtonBounds() const { return { 10, 10, 120, 40 }; } // En haut à gauche
+    Rectangle getShopPanelBounds() const { return { 150, 100, 700, 400 }; } // Le menu central
 
 
 
@@ -56,7 +62,7 @@ private:
     
     
     
-    
+
 
     
    

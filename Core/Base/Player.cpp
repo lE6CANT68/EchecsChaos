@@ -47,6 +47,15 @@ void Player::playCard(int handIndex, Board& board, EventManager& eventManager,Po
     d_hasPlayedCardThisTurn = true;
 }
 
+void Player::removeCardFromHand(int handIndex) {
+    if (handIndex < 0 || handIndex >= d_hand.size()) return;
+    d_hand.erase(d_hand.begin() + handIndex);
+}
+
+void Player::markCardAsPlayed() {
+    d_hasPlayedCardThisTurn = true;
+}
+
 bool Player::hasPlayedCardThisTurn() const { 
     return d_hasPlayedCardThisTurn; 
 }

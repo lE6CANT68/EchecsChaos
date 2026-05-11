@@ -19,6 +19,10 @@ GameEngine::GameEngine(int cellSize)
 
     fillPlayerHand(d_players[0]);
     fillPlayerHand(d_players[1]);
+
+    for(int i=0; i<5; i++) {
+    d_shop.addCard(generateRandomCard()); 
+}
     
     initBoard();
 
@@ -147,8 +151,7 @@ void GameEngine::run() {
     }
 }
 std::unique_ptr<Card> GameEngine::generateRandomCard() {
-    int roll = GetRandomValue(0, 8); 
-     roll = 8;
+    int roll = GetRandomValue(0, 11); 
     switch (roll) {
         case 0: return std::make_unique<MeteoriteCard>();
         case 1: return std::make_unique<TimeCard>();
@@ -159,6 +162,10 @@ std::unique_ptr<Card> GameEngine::generateRandomCard() {
         case 6: return std::make_unique<HideTimeCard>();
         case 7: return std::make_unique<LavaWallCard>();
         case 8: return std::make_unique<TeleportCard>();
+        case 9: return std::make_unique<MysteryCard>(EventRarity::Common);
+        case 10: return std::make_unique<MysteryCard>(EventRarity::Rare);
+        case 11: return std::make_unique<MysteryCard>(EventRarity::Epic);
+        case 12: return std::make_unique<MysteryCard>(EventRarity::Legendary);
         default: return std::make_unique<MeteoriteCard>(); 
     }
 }
@@ -203,13 +210,53 @@ void GameEngine::updateSystems() {
         }
     }
 }
+
 void GameEngine::processInput() {
     Player& currentPlayer = d_players[d_currentPlayerIndex];
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         int mouseX = GetMouseX();
         int mouseY = GetMouseY();
+        Vector2 mousePos = { (float)mouseX, (float)mouseY }; // Utile pour CheckCollisionPointRec
+
+        // --- 1. GESTION DE LA BOUTIQUE (Priorité absolue) ---
+        
+        // A. Clic sur le bouton de la boutique pour l'ouvrir/fermer
+        if (CheckCollisionPointRec(mousePos, d_renderer.getShopButtonBounds())) {
+            d_isShopOpen = !d_isShopOpen;
+            return; // On arrête l'input ici !
+        }
+
+        // B. Si la boutique est ouverte, on intercepte tous les clics
+        if (d_isShopOpen) {
+            // Si on clique en dehors du panneau central, ça ferme la boutique
+            if (!d_shopMenu.isClickInsidePanel(mouseX, mouseY)) {
+                d_isShopOpen = false;
+                return;
+            }
+
+            // On demande au menu sur quelle carte on a cliqué
+            auto clickedIndex = d_shopMenu.getClickedCardIndex(mouseX, mouseY, d_shop.getCards().size());
+            
+            if (clickedIndex.has_value()) {
+                // TENTATIVE D'ACHAT
+                auto boughtCard = d_shop.buyCard(clickedIndex.value(), currentPlayer);
+                if (boughtCard) {
+                    currentPlayer.drawCard(std::move(boughtCard));
+                    // Refill la boutique avec une nouvelle carte
+                    d_shop.refill(generateRandomCard());
+                }
+            }
+            
+            
+            return; 
+        }
+
+
+        
+        
         bool actionExecuted = false;
+        
         if (d_isTargeting) {
             int boardX = (mouseX - d_offsetX) / d_cellSize;
             int boardY = (mouseY - d_offsetY) / d_cellSize;
@@ -225,6 +272,8 @@ void GameEngine::processInput() {
                     } else {
                         if (pendingCard->isValidSecondTarget(d_board, d_firstTarget, targetPos)) {
                             pendingCard->playTwoTargets(currentPlayer, d_board, d_eventManager, d_firstTarget, targetPos);
+                            currentPlayer.removeCardFromHand(d_pendingCardIndex);
+                            currentPlayer.markCardAsPlayed();
                             fillPlayerHand(currentPlayer);
                             d_isTargeting = false;
                             d_pendingCardIndex = -1;
@@ -235,6 +284,8 @@ void GameEngine::processInput() {
                 else {
                     if (pendingCard->isValidTarget(d_board, targetPos)) {
                         pendingCard->play(currentPlayer, d_board, d_eventManager, targetPos);
+                        currentPlayer.removeCardFromHand(d_pendingCardIndex);
+                        currentPlayer.markCardAsPlayed();
                         fillPlayerHand(currentPlayer);
                         d_isTargeting = false;
                         d_pendingCardIndex = -1;
@@ -257,6 +308,7 @@ void GameEngine::processInput() {
                 actionExecuted = true;
             }
         }
+        
         if (!actionExecuted && !d_isTargeting) {
             if (d_isPromoting) {
                 bool promotionSuccess = PromotionHandler::handlePromotion(d_board, d_promotionMenu, d_promotionPos, mouseX, mouseY);
@@ -335,6 +387,8 @@ void GameEngine::renderFrame() {
         }
         
         d_renderer.drawHands(d_players);
+
+        d_renderer.drawShop(d_shop, d_shopMenu, d_isShopOpen);
 
         
         if (d_isTargeting) {

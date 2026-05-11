@@ -4,6 +4,13 @@
 #include "../Base/Board.h"
 #include "../Graphics/VisualEffect.h"
 
+enum class EventRarity {
+    Common,
+    Rare,
+    Epic,
+    Legendary
+};
+
 enum class GlobalEffect {
     None,
     HideTimeWhite,
@@ -28,4 +35,6 @@ public:
 
     virtual std::vector<VisualEffect> getActiveEffects() const { return {}; }
     virtual GlobalEffect getGlobalEffect() const { return GlobalEffect::None; }
+    // À ajouter dans la classe Event :
+    virtual EventRarity getRarity() const = 0;
 };

@@ -23,11 +23,13 @@
 #include "../Core/CardsList/HideTimeCard.h"
 #include "../Core/CardsList/LavaWallCard.h"
 #include "../Core/CardsList/TeleportCard.h"
+#include "../Core/CardsList/MysteryCard.h"
 
 #include "SpecialMoveHandler.h"
 #include "MoveValidator.h"
 #include "PromotionHandler.h"
 #include "BoardInteractionManager.h"
+#include "../Core/Engine/Shop.h"
 
 enum class GameState {
     Playing,
@@ -90,6 +92,9 @@ private:
     const char* getPlayerTimeString(int playerIndex);
 
     Position d_firstTarget = Position::NONE;
+    Shop d_shop;
+    ShopMenu d_shopMenu;
+    bool d_isShopOpen = false;
 
 
 

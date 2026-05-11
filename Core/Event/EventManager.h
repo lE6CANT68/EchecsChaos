@@ -12,6 +12,9 @@
 #include "../Core/Event/EventList/ObstacleEvent.h"
 #include "../Core/Event/EventList/FogEvent.h"
 #include "../Core/Event/EventList/HideTimeEvent.h"
+#include "../Core/Event/EventList/ChameleonEvent.h"
+#include "../Core/Event/EventList/LavaWallEvent.h"
+
 
 class EventManager {
 public:
@@ -35,7 +38,10 @@ public:
 
     bool hasGlobalEffect(GlobalEffect effect) const;
 
+    std::unique_ptr<Event> generateRandomEvent(EventRarity rarity);
+
 private:
+    std::vector<Position> generateRandomWall();
     float d_messageTimer;
     const char* d_currentMessage;
 
@@ -43,7 +49,7 @@ private:
 
     std::vector<std::function<std::unique_ptr<Event>()>> d_eventGenerators;
 
-    int d_eventProbability = 0; 
+    int d_eventProbability = 5; 
 
     const AudioManager& d_audio; 
 };

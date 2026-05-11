@@ -53,6 +53,7 @@ public:
     const char* getMessage() const override { 
         return d_message; 
     }
+    EventRarity getRarity() const override { return EventRarity::Rare; }
 
 private:
     const AudioManager& d_audio;
