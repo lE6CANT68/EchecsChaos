@@ -66,7 +66,7 @@ void GameEngine::handleInput(Position clickedPos) {
 
     PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
 
-    bool moveExecuted = BoardInteractionManager::tryExecuteMove(d_board, clickedPos, d_selectedTile, d_currentValidMoves, d_audioManager);
+    bool moveExecuted = BoardInteractionManager::tryExecuteMove(d_board, clickedPos, d_selectedTile, d_currentValidMoves, d_audioManager,d_players[d_currentPlayerIndex]);
 
     if (moveExecuted) {
         d_currentValidMoves.clear();
@@ -136,19 +136,19 @@ void GameEngine::updateGameState() {
 void GameEngine::run() {
     while (!WindowShouldClose()) {
         
-        updateSystems(); // 1. Mettre à jour l'horloge, les événements et la musique
+        updateSystems(); 
         
         if (d_gameState == GameState::Playing) {
-            processInput(); // 2. Écouter la souris (clics sur plateau, cartes, promotion)
+            processInput(); 
         }
         
-        renderFrame(); // 3. Tout dessiner à l'écran
+        renderFrame(); 
         
     }
 }
 std::unique_ptr<Card> GameEngine::generateRandomCard() {
-    int roll = GetRandomValue(0, 6); 
-   // roll = 6;
+    int roll = GetRandomValue(0, 8); 
+     roll = 8;
     switch (roll) {
         case 0: return std::make_unique<MeteoriteCard>();
         case 1: return std::make_unique<TimeCard>();
@@ -157,6 +157,8 @@ std::unique_ptr<Card> GameEngine::generateRandomCard() {
         case 4: return std::make_unique<FreezeCard>();
         case 5: return std::make_unique<FogCard>();
         case 6: return std::make_unique<HideTimeCard>();
+        case 7: return std::make_unique<LavaWallCard>();
+        case 8: return std::make_unique<TeleportCard>();
         default: return std::make_unique<MeteoriteCard>(); 
     }
 }
@@ -214,10 +216,30 @@ void GameEngine::processInput() {
             Position targetPos = {boardX, boardY};
 
             if (d_board.isinBounds(targetPos)) {
-                currentPlayer.playCard(d_pendingCardIndex, d_board, d_eventManager, targetPos);
-                fillPlayerHand(currentPlayer);
-                d_isTargeting = false;
-                d_pendingCardIndex = -1;
+                Card* pendingCard = currentPlayer.getHand()[d_pendingCardIndex].get();
+                if (pendingCard->requiresTwoTargets()) {
+                    if (!d_firstTarget.isValid()) {
+                        if (pendingCard->isValidTarget(d_board, targetPos)) {
+                            d_firstTarget = targetPos; 
+                        }
+                    } else {
+                        if (pendingCard->isValidSecondTarget(d_board, d_firstTarget, targetPos)) {
+                            pendingCard->playTwoTargets(currentPlayer, d_board, d_eventManager, d_firstTarget, targetPos);
+                            fillPlayerHand(currentPlayer);
+                            d_isTargeting = false;
+                            d_pendingCardIndex = -1;
+                            d_firstTarget = Position::NONE; 
+                        }
+                    }
+                } 
+                else {
+                    if (pendingCard->isValidTarget(d_board, targetPos)) {
+                        pendingCard->play(currentPlayer, d_board, d_eventManager, targetPos);
+                        fillPlayerHand(currentPlayer);
+                        d_isTargeting = false;
+                        d_pendingCardIndex = -1;
+                    }
+                }
             }
             actionExecuted = true; 
         }
@@ -256,12 +278,12 @@ void GameEngine::processInput() {
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && d_isTargeting) {
         d_isTargeting = false;
         d_pendingCardIndex = -1;
+        d_firstTarget = Position::NONE;
     }
 }
 void GameEngine::renderFrame() {
     PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
 
-    // Calcul de la vision globale (Optionnel si inutilisé)
     std::vector<Position> globalVision;
     for (int x = 0; x < d_board.getWidth(); ++x) {
         for (int y = 0; y < d_board.getHeight(); ++y) {
@@ -281,8 +303,10 @@ void GameEngine::renderFrame() {
         if (d_board.isKingInCheck(currentColor)) {
             checkedKingPos = d_board.getKingPosition(currentColor);
         }
-        
-        d_renderer.draw(d_board, d_selectedTile, d_currentValidMoves, currentColor, checkedKingPos);
+        int whiteScore = d_players[0].getScore(); 
+        int blackScore = d_players[1].getScore();
+
+        d_renderer.draw(d_board, d_selectedTile, d_currentValidMoves, currentColor, whiteScore, blackScore, checkedKingPos);
         d_renderer.drawChrono(getPlayerTimeString(0), getPlayerTimeString(1), currentColor, d_offsetX, d_offsetY);
 
         std::vector<VisualEffect> chaosEffects = d_eventManager.getActiveVisualEffects();
@@ -311,6 +335,7 @@ void GameEngine::renderFrame() {
         }
         
         d_renderer.drawHands(d_players);
+
         
         if (d_isTargeting) {
             DrawRectangle(0, 0, GetScreenWidth(), 40, Fade(BLACK, 0.8f));

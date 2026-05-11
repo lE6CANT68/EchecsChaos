@@ -9,12 +9,13 @@ Renderer::Renderer(float cellSize) : d_cellSize{cellSize}, d_offsetX{Config::Gra
     d_drawers[PieceType::Queen] = std::make_unique<QueenDrawer>();
 }
 
-void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,Position kingInCheckPos) {
+void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,int whiteScore, int blackScore,Position kingInCheckPos) {
     drawBoard(board);
     drawTileHighlights(selectedPos, kingInCheckPos); 
     drawPieces(board);
     drawMoveHints(board, validMoves);   
     drawFogLayer(board, selectedPos, validMoves,currentColor);
+    drawScore(whiteScore,blackScore);
     
 }
 void Renderer::drawBoard(const Board& board) {
@@ -42,25 +43,34 @@ void Renderer::drawTileDecoration(TileType type, float posX, float posY) const {
             DrawLineEx({posX + d_cellSize, posY}, {posX, posY + d_cellSize}, 5, BLACK);
             break;
             
-        case TileType::Lava:
+        case TileType::Lava: 
+        {   
             
-            // DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, Fade(ORANGE, 0.6f));
+            DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, {220, 50, 0, 255});
+
+            int pseudoRandom1 = (int)(posX * 13 + posY * 7) % 15;
+            int pseudoRandom2 = (int)(posX * 3 + posY * 11) % 15;
+            
+            DrawCircle((int)posX + 15 + pseudoRandom1, (int)posY + 15 + pseudoRandom2, 8, {255, 140, 0, 200});
+            DrawCircle((int)posX + 45 - pseudoRandom2, (int)posY + 35 + pseudoRandom1, 5, {255, 200, 0, 180});
+            DrawCircle((int)posX + 25 + pseudoRandom2, (int)posY + 55 - pseudoRandom1, 6, {255, 100, 0, 220});
+
+            DrawRectangleLinesEx({posX, posY, d_cellSize, d_cellSize}, 2, {50, 10, 0, 200});
             break;
             
-        case TileType::Ice:
+        }   
             
+        case TileType::Ice:
             // DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, Fade(SKYBLUE, 0.5f));
             break;
             
         case TileType::Normal:
         default:
-            // On ne dessine rien par-dessus
             break;
+            
         case TileType::Frozen:
             DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, Fade(SKYBLUE, 0.5f));
-    
-    
-             DrawRectangleLinesEx({posX + 2, posY + 2, d_cellSize - 4, d_cellSize - 4}, 3, Fade(WHITE, 0.8f));
+            DrawRectangleLinesEx({posX + 2, posY + 2, d_cellSize - 4, d_cellSize - 4}, 3, Fade(WHITE, 0.8f));
             break;
     }
 }
@@ -115,19 +125,15 @@ void Renderer::drawPromotionMenu(PieceColor color, const PromotionMenu& menu) co
     DrawRectangle(0, 0, Config::Graphics::CONFIG_WINDOW_WIDTH, Config::Graphics::CONFIG_WINDOW_HEIGHT, { 0, 0, 0, 150 }); 
 
     float boxSize = (float)menu.getBoxSize();
-    float startX = (float)menu.getStartX(); // <-- Il récupère la valeur centrée (ex: 300)
+    float startX = (float)menu.getStartX(); 
     float startY = (float)menu.getStartY();
     const auto& options = menu.getOptions();
 
     float menuWidth = options.size() * boxSize;
-
-    // Dessin de la barre grise
     DrawRectangle((int)startX, (int)startY, (int)menuWidth, (int)boxSize, LIGHTGRAY);
     DrawRectangleLines((int)startX, (int)startY, (int)menuWidth, (int)boxSize, BLACK);
 
     Color pieceColor = (color == PieceColor::White) ? WHITE : Color{ 40, 40, 40, 255 };
-
-    // Dessin des pièces
     for (size_t i = 0; i < options.size(); ++i) {
         float xPos = startX + (i * boxSize) + (boxSize / 2.0f);
         float yPos = startY + (boxSize / 2.0f);
@@ -149,7 +155,6 @@ void Renderer::drawChrono(const char* whiteTime, const char* blackTime, PieceCol
     } else {
         DrawRectangleLinesEx({(float)posX, (float)blackY, (float)width, (float)height}, 1, GRAY);
     }
-    // On centre le texte par rapport à blackY
     DrawText(blackTime, posX + 20, blackY + 15, fontSize, WHITE);
 
 
@@ -191,29 +196,20 @@ void Renderer::drawFogLayer(const Board& board, Position selectedTile, const std
             Position pos = {x, y};
             const Tile& tile = board.getTile(pos);
             
-            if (tile.isFoggy()) {
+            if (tile.isFoggy() && tile.getType() != TileType::Lava) {
                 bool isRevealed = false;
-
-                // ---> LA NOUVEAUTÉ EST ICI <---
-                // 1. On voit toujours NOS propres pièces !
                 if (tile.hasPiece() && tile.getPiece()->getColor() == currentColor) {
                     isRevealed = true;
                 }
-
-                // 2. Révélé si c'est la case cliquée
                 if (pos.x == selectedTile.x && pos.y == selectedTile.y) {
                     isRevealed = true;
                 }
-
-                // 3. Révélé si c'est un mouvement possible
                 for (const Position& move : currentValidMoves) {
                     if (pos.x == move.x && pos.y == move.y) {
                         isRevealed = true;
                         break;
                     }
                 }
-
-                // On dessine le brouillard seulement si ce n'est pas révélé
                 if (!isRevealed) {
                     float cornerX = d_offsetX + (x * d_cellSize);
                     float cornerY = d_offsetY + (y * d_cellSize);
@@ -223,4 +219,8 @@ void Renderer::drawFogLayer(const Board& board, Position selectedTile, const std
             }
         }
     }
+}
+void Renderer::drawScore(int whiteScore, int blackScore) {
+    DrawText(TextFormat("Score: %d", whiteScore), 900, 600, 20, GOLD);
+    DrawText(TextFormat("Score: %d", blackScore), 900, 200, 20, GOLD);
 }

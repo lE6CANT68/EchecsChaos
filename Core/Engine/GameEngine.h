@@ -21,6 +21,8 @@
 #include "../Core/CardsList/FreezeCard.h"
 #include "../Core/CardsList/FogCard.h"
 #include "../Core/CardsList/HideTimeCard.h"
+#include "../Core/CardsList/LavaWallCard.h"
+#include "../Core/CardsList/TeleportCard.h"
 
 #include "SpecialMoveHandler.h"
 #include "MoveValidator.h"
@@ -86,6 +88,8 @@ private:
     std::unique_ptr<Card> generateRandomCard();
 
     const char* getPlayerTimeString(int playerIndex);
+
+    Position d_firstTarget = Position::NONE;
 
 
 

@@ -27,11 +27,12 @@ public:
     Renderer(float cellSize);
 
 
-    void draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,Position kingInCheckPos = Position::NONE);
+    void draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,int whiteScore, int blackScore,Position kingInCheckPos = Position::NONE);
     void drawPromotionMenu(PieceColor color,const PromotionMenu& menu) const;
     void drawChrono(const char* whiteTime, const char* blackTime, PieceColor currentTurn, int offsetX, int offsetY);
     void drawEffects(const std::vector<VisualEffect>& effects);
     void drawHands(const std::vector<Player>& players) const ;
+    void drawScore(int whiteScore, int blackScore);
     
 
     int getClickedCardIndex(int playerIndex, int numCards, int mouseX, int mouseY) const;

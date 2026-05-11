@@ -2,12 +2,17 @@
 #include "SpecialMoveHandler.h"
 #include "MoveValidator.h"
 
-bool BoardInteractionManager::tryExecuteMove(Board& board, Position clickedPos, Position& selectedTile, const std::vector<Position>& validMoves, AudioManager& audioManager) {
+bool BoardInteractionManager::tryExecuteMove(Board& board, Position clickedPos, Position& selectedTile, const std::vector<Position>& validMoves, AudioManager& audioManager, Player& currentPlayer) {
     if (!selectedTile.isValid()) return false;
 
     for (const Position& validMove : validMoves) {
         if (clickedPos == validMove) { 
             bool isCapture = board.getTile(clickedPos).hasPiece();
+            if (isCapture) {
+                PieceType capturedType = board.getTile(clickedPos).getPiece()->getType();
+                int earnedPoints = ScoreHandler::calculateCaptureScore(capturedType);
+                currentPlayer.addScore(earnedPoints);
+            }
 
             SpecialMoveHandler::handleCastling(board, selectedTile, clickedPos);
             SpecialMoveHandler::handleEnPassant(board, selectedTile, clickedPos);

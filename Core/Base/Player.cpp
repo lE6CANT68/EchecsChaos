@@ -54,3 +54,6 @@ bool Player::hasPlayedCardThisTurn() const {
 void Player::resetTurn() { 
     d_hasPlayedCardThisTurn = false; 
 }
+void Player::addScore(int points) { d_score += points; }
+int Player::getScore() const { return d_score; }
+void Player::spendScore(int amount) { d_score -= amount; }
