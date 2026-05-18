@@ -1,6 +1,7 @@
 #pragma once
 #include "Settings.h"
 #include "Button.h"
+#include <functional>
 #include <raylib.h>
 #include <string>
 
@@ -16,6 +17,7 @@ public:
 
     void update(int mouseX, int mouseY, bool isMousePressed);
     void draw() const;
+    void setButtonClickCallback(const std::function<void()>& callback);
 
     Action getSelectedAction() const;
     void clearAction();
@@ -36,6 +38,8 @@ private:
     // Boutons de sauvegarde et retour
     Button d_saveButton{ 250, 350, "SAUVEGARDER" };
     Button d_backButton{ 550, 350, "Annuler" };
+
+    std::function<void()> d_buttonClickCallback;
 
     void drawVolumeText() const;
 };

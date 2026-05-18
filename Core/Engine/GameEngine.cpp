@@ -19,6 +19,9 @@ GameEngine::GameEngine(int cellSize)
     updateBoardLayout();
     d_audioManager.setVolume(d_settings.getMusicVolume());
 
+    d_titleScreen.setButtonClickCallback([this](){ d_audioManager.playButtonPress(); });
+    d_settingsScreen.setButtonClickCallback([this](){ d_audioManager.playButtonPress(); });
+
     d_players.push_back(Player(PieceColor::White, Chrono::STANDARD_TIME, Chrono::STANDARD_INCREMENT));
     d_players.push_back(Player(PieceColor::Black, Chrono::STANDARD_TIME, Chrono::STANDARD_INCREMENT));
     d_currentPlayerIndex = 0;
@@ -292,10 +295,12 @@ void GameEngine::processInput() {
         int mouseX = GetMouseX();
         int mouseY = GetMouseY();
         if (d_shopButton.update(mouseX, mouseY, true)) {
+            d_audioManager.playButtonPress();
             d_isShopOpen = !d_isShopOpen;
             return;
         }
         if (d_toggleHandButton.update(mouseX, mouseY, true)) {
+            d_audioManager.playButtonPress();
             d_isHandVisible = !d_isHandVisible;
             return; 
         }

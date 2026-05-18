@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <string>
 #include <raylib.h>
 
@@ -7,8 +8,12 @@ public:
     Button(float x, float y, const std::string& text);
     
     bool update(int mouseX, int mouseY, bool isMousePressed);
+    void setOnClick(const std::function<void()>& callback);
 
     void draw() const;
+    void setPosition(float x, float y);
+    float getWidth() const;
+    float getHeight() const;
 
 private:
     static constexpr int FONT_SIZE = 20;
@@ -18,6 +23,7 @@ private:
     Rectangle d_bounds;
     std::string d_text;
     bool d_isHovered;
+    std::function<void()> d_onClick;
 
     Color d_normalColor;
     Color d_hoverColor;

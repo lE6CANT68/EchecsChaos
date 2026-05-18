@@ -5,6 +5,10 @@ SettingsScreen::SettingsScreen(Settings& settings)
 {
 }
 
+void SettingsScreen::setButtonClickCallback(const std::function<void()>& callback) {
+    d_buttonClickCallback = callback;
+}
+
 void SettingsScreen::update(int mouseX, int mouseY, bool isMousePressed) {
     // Update hover states
     d_resolution800x600.update(mouseX, mouseY, false);
@@ -19,26 +23,33 @@ void SettingsScreen::update(int mouseX, int mouseY, bool isMousePressed) {
 
     // Gestion des clics
     if (d_resolution800x600.update(mouseX, mouseY, true)) {
+        if (d_buttonClickCallback) d_buttonClickCallback();
         d_settings.setWindowWidth(800);
         d_settings.setWindowHeight(600);
     } else if (d_resolution1000x800.update(mouseX, mouseY, true)) {
+        if (d_buttonClickCallback) d_buttonClickCallback();
         d_settings.setWindowWidth(1000);
         d_settings.setWindowHeight(800);
     } else if (d_resolution1200x900.update(mouseX, mouseY, true)) {
+        if (d_buttonClickCallback) d_buttonClickCallback();
         d_settings.setWindowWidth(1200);
         d_settings.setWindowHeight(900);
     } else if (d_volumeDown.update(mouseX, mouseY, true)) {
+        if (d_buttonClickCallback) d_buttonClickCallback();
         float currentVolume = d_settings.getMusicVolume();
         d_settings.setMusicVolume(std::max(0.0f, currentVolume - 0.1f));
     } else if (d_volumeUp.update(mouseX, mouseY, true)) {
+        if (d_buttonClickCallback) d_buttonClickCallback();
         float currentVolume = d_settings.getMusicVolume();
         d_settings.setMusicVolume(std::min(1.0f, currentVolume + 0.1f));
     } else if (d_saveButton.update(mouseX, mouseY, true)) {
+        if (d_buttonClickCallback) d_buttonClickCallback();
         d_selectedAction = Action::Save;
         d_settings.save(); // Sauvegarde immédiate
     } else if (d_backButton.update(mouseX, mouseY, true)) {
+        if (d_buttonClickCallback) d_buttonClickCallback();
         d_selectedAction = Action::Back;
-        d_settings.save(); // Sauvegarde automatique en quittant
+        d_settings.save(); //Auto save on quit
     }
 }
 

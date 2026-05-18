@@ -1,7 +1,7 @@
 #include "Button.h"
 
 Button::Button(float x, float y, const std::string& text)
-    : d_text(text), d_isHovered(false) 
+    : d_text(text), d_isHovered(false)
 {
     int textWidth = MeasureText(text.c_str(), FONT_SIZE);
     float width = textWidth + (PADDING_X * 2);
@@ -9,9 +9,13 @@ Button::Button(float x, float y, const std::string& text)
     
     d_bounds = {x, y, width, height};
 
-    d_normalColor = { 40, 35, 50, 255 }; // Grey
-    d_hoverColor = { 80, 70, 100, 255 }; // Violet 
-    d_textColor = { 255, 190, 20, 255 }; //Gold
+    d_normalColor = { 80, 70, 100, 255 }; // Grey violet
+    d_hoverColor = { 50, 45, 70, 255 }; // Darker on hover
+    d_textColor = { 255, 190, 20, 255 }; // Gold
+}
+
+void Button::setOnClick(const std::function<void()>& callback) {
+    d_onClick = callback;
 }
 
 bool Button::update(int mouseX, int mouseY, bool isMousePressed) {
@@ -19,8 +23,10 @@ bool Button::update(int mouseX, int mouseY, bool isMousePressed) {
 
     d_isHovered = CheckCollisionPointRec(mousePos, d_bounds);
 
-    
     if (d_isHovered && isMousePressed) {
+        if (d_onClick) {
+            d_onClick();
+        }
         return true; 
     }
     return false;
@@ -38,4 +44,17 @@ void Button::draw() const {
     int textY = d_bounds.y + (d_bounds.height - FONT_SIZE) / 2.0f;
 
     DrawText(d_text.c_str(), textX, textY, FONT_SIZE, d_textColor);
+}
+
+void Button::setPosition(float x, float y) {
+    d_bounds.x = x;
+    d_bounds.y = y;
+}
+
+float Button::getWidth() const {
+    return d_bounds.width;
+}
+
+float Button::getHeight() const {
+    return d_bounds.height;
 }

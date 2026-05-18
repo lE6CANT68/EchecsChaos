@@ -10,6 +10,7 @@ public:
     
     void playMove() const;
     void playCapture() const;
+    void playButtonPress() const;
     void playMusic() const;
     void playGameOver() const;
     void playVictory() const;
@@ -22,6 +23,7 @@ public:
 private:
     Sound d_soundMove;
     Sound d_soundCapture;
+    Sound d_soundButtonPress;
     Sound d_soundVictory;
     Sound d_soundGameOver;
     Sound d_soundStalemate;
