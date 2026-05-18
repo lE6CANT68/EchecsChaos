@@ -4,6 +4,7 @@
 class ShopMenu {
 public:
     ShopMenu();
+    void updateLayout(int screenWidth, int screenHeight, int numCardsInShop);
     std::optional<int> getClickedCardIndex(int mouseX, int mouseY, int numCardsInShop) const;
     bool isClickInsidePanel(int mouseX, int mouseY) const;
     

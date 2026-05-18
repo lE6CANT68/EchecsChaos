@@ -26,5 +26,8 @@ void AudioManager::playMusic() const{PlayMusicStream(d_music);}
 void AudioManager::playGameOver() const{PlaySound(d_soundGameOver);}
 void AudioManager::playVictory() const{PlaySound(d_soundVictory);}
 void AudioManager::playStalemate() const{PlaySound(d_soundStalemate);}
-void AudioManager::updateMusic() const { UpdateMusicStream(d_music);}
+void AudioManager::setVolume(float volume) {
+    d_volume = volume;
+    SetMusicVolume(d_music, d_volume);
+}
 

@@ -37,14 +37,15 @@ void Player::drawCard(std::unique_ptr<Card> newCard) {
     d_hand.push_back(std::move(newCard));
 }
 
-void Player::playCard(int handIndex, Board& board, EventManager& eventManager,Position target) {
-    if (d_hasPlayedCardThisTurn) return; 
-    if (handIndex < 0 || handIndex >= d_hand.size()) return;
-    d_hand[handIndex]->play(*this, board, eventManager,target);
+bool Player::playCard(int handIndex, Board& board, EventManager& eventManager,Position target) {
+    if (d_hasPlayedCardThisTurn) return false;
+    if (handIndex < 0 || handIndex >= d_hand.size()) return false;
 
-    
+    std::unique_ptr<Card> card = std::move(d_hand[handIndex]);
     d_hand.erase(d_hand.begin() + handIndex);
+    card->play(*this, board, eventManager,target);
     d_hasPlayedCardThisTurn = true;
+    return true;
 }
 
 void Player::removeCardFromHand(int handIndex) {

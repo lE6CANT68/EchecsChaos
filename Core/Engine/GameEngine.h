@@ -13,6 +13,9 @@
 #include "../Core/Pieces/Bishop.h"
 #include "../Core/Pieces/Queen.h"
 #include "../Core/Pieces/King.h"
+#include "../Graphics/UI/Settings.h"
+#include "../Graphics/UI/SettingsScreen.h"
+#include "../Graphics/UI/TitleScreen.h"
 
 #include "../Core/CardsList/MeteoriteCard.h"
 #include "../Core/CardsList/TimeCard.h"
@@ -31,7 +34,11 @@
 #include "BoardInteractionManager.h"
 #include "../Core/Engine/Shop.h"
 
+#include "../Graphics/UI/SettingsScreen.h"
+
 enum class GameState {
+    TitleScreen,
+    Settings,
     Playing,
     WhiteWins,
     BlackWins,
@@ -46,7 +53,11 @@ public:
 
 private:
 
-    GameState d_gameState = GameState::Playing;
+    GameState d_gameState = GameState::TitleScreen;
+    bool d_shouldQuit = false;
+    Settings d_settings;
+    SettingsScreen d_settingsScreen;
+    TitleScreen d_titleScreen;
     Board d_board;
     Renderer d_renderer;
     bool d_isPromoting = false;
@@ -79,12 +90,13 @@ private:
 
     void initBoard();
     void handleInput(Position clickedPos);
-
+    int getFlippedBoardY(int boardY) const;
 
     void updateGameState();
     void updateSystems();
     void processInput();
     void renderFrame();
+    void updateBoardLayout();
 
     void fillPlayerHand(Player& player);
     std::unique_ptr<Card> generateRandomCard();
@@ -95,6 +107,9 @@ private:
     Shop d_shop;
     ShopMenu d_shopMenu;
     bool d_isShopOpen = false;
+    Button d_shopButton{ 10, 10, "BOUTIQUE" };
+    bool d_isHandVisible = true;
+    Button d_toggleHandButton{ 140, 10, "CARTES (ON/OFF)" };
 
 
 

@@ -21,7 +21,7 @@ public:
 
     const std::vector<std::unique_ptr<Card>>& getHand() const;
     void drawCard(std::unique_ptr<Card> newCard);
-    void playCard(int handIndex, Board& board, EventManager& eventManager,Position target = {-1, -1});
+    bool playCard(int handIndex, Board& board, EventManager& eventManager,Position target = {-1, -1});
     void removeCardFromHand(int handIndex);
     void markCardAsPlayed();
     bool hasPlayedCardThisTurn() const;

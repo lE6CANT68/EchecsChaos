@@ -13,6 +13,7 @@ public:
     int getBoxSize() const ;
     int getStartX() const ;
     int getStartY() const ;
+    void updateLayout(int boardStartX, int boardWidth);
 
 private:
     std::vector<PieceType> d_options;

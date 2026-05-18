@@ -1,0 +1,41 @@
+#include "Button.h"
+
+Button::Button(float x, float y, const std::string& text)
+    : d_text(text), d_isHovered(false) 
+{
+    int textWidth = MeasureText(text.c_str(), FONT_SIZE);
+    float width = textWidth + (PADDING_X * 2);
+    float height = FONT_SIZE + (PADDING_Y * 2);
+    
+    d_bounds = {x, y, width, height};
+
+    d_normalColor = { 40, 35, 50, 255 }; // Grey
+    d_hoverColor = { 80, 70, 100, 255 }; // Violet 
+    d_textColor = { 255, 190, 20, 255 }; //Gold
+}
+
+bool Button::update(int mouseX, int mouseY, bool isMousePressed) {
+    Vector2 mousePos = { (float)mouseX, (float)mouseY };
+
+    d_isHovered = CheckCollisionPointRec(mousePos, d_bounds);
+
+    
+    if (d_isHovered && isMousePressed) {
+        return true; 
+    }
+    return false;
+}
+
+void Button::draw() const {
+    Color bgColor = d_isHovered ? d_hoverColor : d_normalColor;
+
+    DrawRectangleRec(d_bounds, bgColor);
+    DrawRectangleLinesEx(d_bounds, 2, d_textColor);
+
+    int textWidth = MeasureText(d_text.c_str(), FONT_SIZE);
+    
+    int textX = d_bounds.x + (d_bounds.width - textWidth) / 2.0f;
+    int textY = d_bounds.y + (d_bounds.height - FONT_SIZE) / 2.0f;
+
+    DrawText(d_text.c_str(), textX, textY, FONT_SIZE, d_textColor);
+}

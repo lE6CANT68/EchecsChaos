@@ -1,20 +1,45 @@
 #include "ShopMenu.h"
+#include <algorithm>
 
 ShopMenu::ShopMenu() {
-    // 1. Dimensions du grand panneau central
+    // Layout initial par défaut, sera recalculé en fonction de la fenêtre
     d_panelWidth = 700;
     d_panelHeight = 400;
-    d_panelX = 150; // À ajuster selon la taille de ta fenêtre (Config::Graphics...)
+    d_panelX = 50;
     d_panelY = 100;
 
-    // 2. Dimensions et espacement des cartes
     d_cardWidth = 100;
     d_cardHeight = 150;
-    d_spacing = 30; // L'espace vide entre chaque carte
+    d_spacing = 30;
 
-    // 3. Point de départ de la première carte pour que ça soit bien centré
-    d_startX = d_panelX + 40; 
+    d_startX = d_panelX + 40;
     d_startY = d_panelY + 120;
+}
+
+void ShopMenu::updateLayout(int screenWidth, int screenHeight, int numCards) {
+    const int horizontalMargin = 40;
+    const int verticalMargin = 40;
+    const int panelTopMargin = 80;
+    const int panelBottomMargin = 80;
+
+    d_panelWidth = std::max(300, screenWidth - horizontalMargin * 2);
+    if (d_panelWidth > 700) d_panelWidth = 700;
+
+    d_panelHeight = std::max(260, screenHeight - panelTopMargin - panelBottomMargin);
+    if (d_panelHeight > 420) d_panelHeight = 420;
+
+    d_panelX = (screenWidth - d_panelWidth) / 2;
+    d_panelY = (screenHeight - d_panelHeight) / 2;
+
+    d_spacing = 20;
+    int availableCardArea = d_panelWidth - 80;
+    int targetCardWidth = (availableCardArea - (numCards - 1) * d_spacing) / std::max(1, numCards);
+    d_cardWidth = std::clamp(targetCardWidth, 80, 120);
+    d_cardHeight = static_cast<int>(d_cardWidth * 1.3f);
+
+    int totalCardsWidth = numCards * d_cardWidth + (numCards - 1) * d_spacing;
+    d_startX = d_panelX + std::max(40, (d_panelWidth - totalCardsWidth) / 2);
+    d_startY = d_panelY + std::max(40, (d_panelHeight - d_cardHeight) / 2);
 }
 
 bool ShopMenu::isClickInsidePanel(int mouseX, int mouseY) const {
@@ -30,7 +55,7 @@ std::optional<int> ShopMenu::getClickedCardIndex(int mouseX, int mouseY, int num
 
         if (mouseX >= cardX && mouseX <= cardX + d_cardWidth &&
             mouseY >= cardY && mouseY <= cardY + d_cardHeight) {
-            return i; // On a trouvé la carte cliquée !
+            return i;
         }
     }
     return std::nullopt;

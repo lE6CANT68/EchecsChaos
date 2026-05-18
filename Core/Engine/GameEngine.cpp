@@ -1,4 +1,5 @@
 #include "GameEngine.h"
+#include <iostream>
 
 
 
@@ -10,9 +11,14 @@ GameEngine::GameEngine(int cellSize)
       d_offsetX(Config::Graphics::DEFAULT_OFFSETX),  
       d_offsetY(Config::Graphics::DEFAULT_OFFSETY),
       d_promotionMenu({BASE_PROMOTIONS}),
-
+      d_settingsScreen(d_settings),
       d_eventManager{d_audioManager}
 {
+    // Appliquer les paramètres chargés
+    d_settings.applySettings();
+    updateBoardLayout();
+    d_audioManager.setVolume(d_settings.getMusicVolume());
+
     d_players.push_back(Player(PieceColor::White, Chrono::STANDARD_TIME, Chrono::STANDARD_INCREMENT));
     d_players.push_back(Player(PieceColor::Black, Chrono::STANDARD_TIME, Chrono::STANDARD_INCREMENT));
     d_currentPlayerIndex = 0;
@@ -58,6 +64,13 @@ void GameEngine::initBoard() {
     d_board.getTile({5, wBack}).setPiece(std::make_unique<Bishop>(PieceColor::White));
     d_board.getTile({6, wBack}).setPiece(std::make_unique<Knight>(PieceColor::White));
     d_board.getTile({7, wBack}).setPiece(std::make_unique<Rook>(PieceColor::White));
+}
+
+int GameEngine::getFlippedBoardY(int boardY) const {
+    if (d_players[d_currentPlayerIndex].getColor() == PieceColor::Black) {
+        return d_board.getHeight() - 1 - boardY;
+    }
+    return boardY;
 }
 
 void GameEngine::handleInput(Position clickedPos) {
@@ -138,18 +151,56 @@ void GameEngine::updateGameState() {
 }
 
 void GameEngine::run() {
-    while (!WindowShouldClose()) {
-        
+    while (!WindowShouldClose() && !d_shouldQuit) {
         updateSystems(); 
         
         if (d_gameState == GameState::Playing) {
             processInput(); 
+        } else if (d_gameState == GameState::TitleScreen) {
+            d_titleScreen.update(GetMouseX(), GetMouseY(), IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            switch (d_titleScreen.getSelectedAction()) {
+                case TitleScreen::Action::Play:
+                    d_gameState = GameState::Playing;
+                    d_titleScreen.clearAction();
+                    break;
+                case TitleScreen::Action::Settings:
+                    d_gameState = GameState::Settings;
+                    d_settings.backupCurrentSettings(); // Sauvegarder l'état actuel
+                    d_titleScreen.clearAction();
+                    break;
+                case TitleScreen::Action::Quit:
+                    d_shouldQuit = true;
+                    d_titleScreen.clearAction();
+                    break;
+                default:
+                    break;
+            }
+        } else if (d_gameState == GameState::Settings) {
+            d_settingsScreen.update(GetMouseX(), GetMouseY(), IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            if (d_settingsScreen.getSelectedAction() == SettingsScreen::Action::Save) {
+                    d_settingsScreen.clearAction();
+                // Réappliquer les paramètres après sauvegarde
+                d_settings.applySettings();
+                updateBoardLayout();
+                d_audioManager.setVolume(d_settings.getMusicVolume());
+                // Retourner automatiquement à l'écran titre après sauvegarde
+                d_gameState = GameState::TitleScreen;
+            } else if (d_settingsScreen.getSelectedAction() == SettingsScreen::Action::Back) {
+                d_gameState = GameState::TitleScreen;
+                d_settingsScreen.clearAction();
+                // Annuler les changements en restaurant les paramètres sauvegardés
+                d_settings.restoreSettings();
+                d_settings.applySettings();
+                updateBoardLayout();
+                d_audioManager.setVolume(d_settings.getMusicVolume());
+            }
         }
         
         renderFrame(); 
         
     }
 }
+
 std::unique_ptr<Card> GameEngine::generateRandomCard() {
     int roll = GetRandomValue(0, 11); 
     switch (roll) {
@@ -195,8 +246,31 @@ const char* GameEngine::getPlayerTimeString(int playerIndex) {
         return d_players[playerIndex].getClock().getFormattedTime();
     }
 }
+
+void GameEngine::updateBoardLayout() {
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+    const int margin = 40;
+    const int maxBoardSize = static_cast<int>(Config::Graphics::BOARD_PIXEL_SIZE);
+
+    int boardSize = std::min({screenWidth - margin, screenHeight - margin, maxBoardSize});
+    if (boardSize < 8) {
+        boardSize = maxBoardSize;
+    }
+
+    int cellSize = boardSize / Config::Board::WIDTH;
+    boardSize = cellSize * Config::Board::WIDTH;
+
+    d_cellSize = cellSize;
+    d_offsetX = (screenWidth - boardSize) / 2;
+    d_offsetY = (screenHeight - boardSize) / 2;
+
+    d_renderer.updateLayout((float)d_cellSize, (float)d_offsetX, (float)d_offsetY);
+    d_promotionMenu.updateLayout(d_offsetX, boardSize);
+}
+
 void GameEngine::updateSystems() {
-    d_audioManager.updateMusic();
+    UpdateMusicStream(d_audioManager.getMusic()); // Mise à jour de la musique
     d_eventManager.update();
 
     if (d_gameState == GameState::Playing && !d_isPromoting) { 
@@ -217,19 +291,17 @@ void GameEngine::processInput() {
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         int mouseX = GetMouseX();
         int mouseY = GetMouseY();
-        Vector2 mousePos = { (float)mouseX, (float)mouseY }; // Utile pour CheckCollisionPointRec
-
-        // --- 1. GESTION DE LA BOUTIQUE (Priorité absolue) ---
-        
-        // A. Clic sur le bouton de la boutique pour l'ouvrir/fermer
-        if (CheckCollisionPointRec(mousePos, d_renderer.getShopButtonBounds())) {
+        if (d_shopButton.update(mouseX, mouseY, true)) {
             d_isShopOpen = !d_isShopOpen;
-            return; // On arrête l'input ici !
+            return;
         }
-
-        // B. Si la boutique est ouverte, on intercepte tous les clics
+        if (d_toggleHandButton.update(mouseX, mouseY, true)) {
+            d_isHandVisible = !d_isHandVisible;
+            return; 
+        }
         if (d_isShopOpen) {
-            // Si on clique en dehors du panneau central, ça ferme la boutique
+            d_shopMenu.updateLayout(GetScreenWidth(), GetScreenHeight(), d_shop.getCards().size());
+            // Si on clique en dehors du panneau central, on ferme la boutique
             if (!d_shopMenu.isClickInsidePanel(mouseX, mouseY)) {
                 d_isShopOpen = false;
                 return;
@@ -239,27 +311,25 @@ void GameEngine::processInput() {
             auto clickedIndex = d_shopMenu.getClickedCardIndex(mouseX, mouseY, d_shop.getCards().size());
             
             if (clickedIndex.has_value()) {
-                // TENTATIVE D'ACHAT
+                // Tentative d'achat
                 auto boughtCard = d_shop.buyCard(clickedIndex.value(), currentPlayer);
                 if (boughtCard) {
-                    currentPlayer.drawCard(std::move(boughtCard));
-                    // Refill la boutique avec une nouvelle carte
-                    d_shop.refill(generateRandomCard());
+                    currentPlayer.drawCard(std::move(boughtCard)); 
+                    // d_audioManager.playBuySound(); // Optionnel : bruit d'or
+                    d_shop.addCard(generateRandomCard());
                 }
             }
             
-            
+            // On bloque le reste du code (pas de déplacement de pièces en arrière-plan)
             return; 
         }
 
-
-        
-        
         bool actionExecuted = false;
         
         if (d_isTargeting) {
             int boardX = (mouseX - d_offsetX) / d_cellSize;
             int boardY = (mouseY - d_offsetY) / d_cellSize;
+            boardY = getFlippedBoardY(boardY);
             Position targetPos = {boardX, boardY};
 
             if (d_board.isinBounds(targetPos)) {
@@ -294,16 +364,17 @@ void GameEngine::processInput() {
             }
             actionExecuted = true; 
         }
-        else if (!currentPlayer.hasPlayedCardThisTurn()) {
-            int clickedCard = d_renderer.getClickedCardIndex(d_currentPlayerIndex, currentPlayer.getHand().size(), mouseX, mouseY);
+        else if (!currentPlayer.hasPlayedCardThisTurn() && d_isHandVisible) {
+            int clickedCard = d_renderer.getClickedCardIndex(currentPlayer.getHand().size(), mouseX, mouseY);
 
             if (clickedCard != -1) {
                 if (currentPlayer.getHand()[clickedCard]->requiresTarget()) {
                     d_isTargeting = true;
                     d_pendingCardIndex = clickedCard;
                 } else {
-                    currentPlayer.playCard(clickedCard, d_board, d_eventManager);
-                    fillPlayerHand(currentPlayer);
+                    if (currentPlayer.playCard(clickedCard, d_board, d_eventManager)) {
+                        fillPlayerHand(currentPlayer);
+                    }
                 }
                 actionExecuted = true;
             }
@@ -323,9 +394,14 @@ void GameEngine::processInput() {
             } else {
                 int boardX = (mouseX - d_offsetX) / d_cellSize;
                 int boardY = (mouseY - d_offsetY) / d_cellSize;
+                boardY = getFlippedBoardY(boardY);
                 handleInput({boardX, boardY}); 
             }
         }
+    }
+    else if (d_gameState == GameState::Settings) {
+        d_settingsScreen.draw();
+        return;
     }
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && d_isTargeting) {
         d_isTargeting = false;
@@ -334,6 +410,14 @@ void GameEngine::processInput() {
     }
 }
 void GameEngine::renderFrame() {
+    if (d_gameState == GameState::TitleScreen) {
+        d_titleScreen.draw();
+        return;
+    } else if (d_gameState == GameState::Settings) {
+        d_settingsScreen.draw();
+        return;
+    }
+
     PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
 
     std::vector<Position> globalVision;
@@ -376,19 +460,30 @@ void GameEngine::renderFrame() {
         }
         
         if (d_gameState != GameState::Playing) {
-            DrawRectangle(0, 0, Config::Graphics::CONFIG_WINDOW_HEIGHT, Config::Graphics::CONFIG_WINDOW_WIDTH, { 0, 0, 0, 200 }); 
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), { 0, 0, 0, 200 }); 
             const char* message = "";
             if (d_gameState == GameState::WhiteWins) message = "LES BLANCS GAGNENT !"; 
             if (d_gameState == GameState::BlackWins) message = "LES NOIRS GAGNENT !";  
             if (d_gameState == GameState::Stalemate) message = "PAT ! MATCH NUL !";
 
             int textWidth = MeasureText(message, 30);
-            DrawText(message, 400 - (textWidth / 2), 380, 30, RAYWHITE);
+            DrawText(message, (GetScreenWidth() / 2) - (textWidth / 2), GetScreenHeight() / 2, 30, RAYWHITE);
         }
         
-        d_renderer.drawHands(d_players);
+        if (d_isHandVisible) {
+            d_renderer.drawHands(d_players[d_currentPlayerIndex]);
+        }
 
+        if (d_isShopOpen) {
+            d_shopMenu.updateLayout(GetScreenWidth(), GetScreenHeight(), d_shop.getCards().size());
+        }
         d_renderer.drawShop(d_shop, d_shopMenu, d_isShopOpen);
+
+        d_shopButton.update(GetMouseX(), GetMouseY(), false); 
+        d_shopButton.draw();
+
+        d_toggleHandButton.update(GetMouseX(), GetMouseY(), false); 
+        d_toggleHandButton.draw();
 
         
         if (d_isTargeting) {

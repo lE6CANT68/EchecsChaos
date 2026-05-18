@@ -15,7 +15,9 @@ public:
     void playVictory() const;
     void playStalemate() const;
 
-    void updateMusic() const;
+    void setVolume(float volume);
+
+    Music getMusic() const { return d_music; }
 
 private:
     Sound d_soundMove;

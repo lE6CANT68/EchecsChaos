@@ -7,9 +7,9 @@
 class CardRenderer {
 public:
     CardRenderer();
-    void drawHands(const std::vector<Player>& players, int mouseX, int mouseY) const;
+    void drawHands(const Player& currentPlayer, int mouseX, int mouseY) const;
     void drawCard(const Card& card, int x, int y, bool isHovered) const;
-    int getClickedCardIndex(int playerIndex, int numCards, int mouseX, int mouseY) const ;
+    int getClickedCardIndex(int numCards, int mouseX, int mouseY) const ;
 
 private:
     static const int CARD_WIDTH = 100;
@@ -18,4 +18,5 @@ private:
     static const int HOVER_LIFT = 10; 
 
     Color getRarityColor(CardRarity rarity) const;
+    void drawGradientBackground(int x, int y, Color rarityColor) const;
 };

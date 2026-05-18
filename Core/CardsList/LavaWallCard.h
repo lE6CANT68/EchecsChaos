@@ -7,7 +7,7 @@ class LavaWallCard : public Card {
 public:
     std::string getName() const override { return "Mur de Lave"; }
     std::string getDescription() const override { return "Cree un mur de lave horizontal (3 cases). Fait fondre les pieces et bloque le passage pour 4 tours."; }
-    int getCost() const override { return 5; } 
+    int getCost() const override { return 10; } 
     CardRarity getRarity() const override { return CardRarity::Legendary; } 
     
     bool requiresTarget() const override { return true; } 
@@ -19,7 +19,7 @@ public:
             target,
             {target.x + 1, target.y}
         };
-        auto lavaEvent = std::make_unique<LavaWallEvent>(wallPos, 4, eventManager.getAudio());
+        auto lavaEvent = std::make_unique<LavaWallEvent>(wallPos, 6, eventManager.getAudio());
         eventManager.addEvent(board, std::move(lavaEvent));
     }
     bool isValidTarget(Board& board, Position target) const override{

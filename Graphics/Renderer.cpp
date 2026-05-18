@@ -1,6 +1,6 @@
 #include "Renderer.h"
 
-Renderer::Renderer(float cellSize) : d_cellSize{cellSize}, d_offsetX{Config::Graphics::DEFAULT_OFFSETX}, d_offsetY{Config::Graphics::DEFAULT_OFFSETY} {
+Renderer::Renderer(float cellSize) : d_cellSize(cellSize), d_offsetX(Config::Graphics::DEFAULT_OFFSETX), d_offsetY(Config::Graphics::DEFAULT_OFFSETY) {
     d_drawers[PieceType::Pawn] = std::make_unique<PawnDrawer>();
     d_drawers[PieceType::Bishop] = std::make_unique<BishopDrawer>();
     d_drawers[PieceType::Knight] = std::make_unique<KnightDrawer>();
@@ -10,21 +10,22 @@ Renderer::Renderer(float cellSize) : d_cellSize{cellSize}, d_offsetX{Config::Gra
 }
 
 void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,int whiteScore, int blackScore,Position kingInCheckPos) {
-    drawBoard(board);
-    drawTileHighlights(selectedPos, kingInCheckPos); 
-    drawPieces(board);
-    drawMoveHints(board, validMoves);   
-    drawFogLayer(board, selectedPos, validMoves,currentColor);
+    drawBoard(board, currentColor);
+    drawTileHighlights(selectedPos, kingInCheckPos, board, currentColor); 
+    drawPieces(board, currentColor);
+    drawMoveHints(board, validMoves, currentColor);   
+    drawFogLayer(board, selectedPos, validMoves, currentColor);
     drawScore(whiteScore,blackScore);
     
 }
-void Renderer::drawBoard(const Board& board) {
+void Renderer::drawBoard(const Board& board, PieceColor currentColor) {
     for (int x = 0; x < board.getWidth(); ++x) {
         for (int y = 0; y < board.getHeight(); ++y) {
+            int displayY = (currentColor == PieceColor::Black) ? getFlippedY(y, board.getHeight()) : y;
             Color color = ((x + y) % 2 == 0) ? LIGHTGRAY : GRAY;
             
             float posX = d_offsetX + (x * d_cellSize);
-            float posY = d_offsetY + (y * d_cellSize);
+            float posY = d_offsetY + (displayY * d_cellSize);
 
             
             DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, color);
@@ -75,7 +76,7 @@ void Renderer::drawTileDecoration(TileType type, float posX, float posY) const {
     }
 }
 
-void Renderer::drawPieces(const Board& board) {
+void Renderer::drawPieces(const Board& board, PieceColor currentColor) {
     for (int x = 0; x < board.getWidth(); ++x) {
         for (int y = 0; y < board.getHeight(); ++y) {
             Position pos = {x, y};
@@ -83,8 +84,9 @@ void Renderer::drawPieces(const Board& board) {
 
             if (tile.hasPiece()) {
                 Piece* currentPiece = tile.getPiece();
+                int displayY = (currentColor == PieceColor::Black) ? getFlippedY(y, board.getHeight()) : y;
                 float centerX = d_offsetX + (x * d_cellSize) + (d_cellSize / 2.0f);
-                float centerY = d_offsetY + (y * d_cellSize) + (d_cellSize / 2.0f);
+                float centerY = d_offsetY + (displayY * d_cellSize) + (d_cellSize / 2.0f);
                 Color pieceColor = (currentPiece->getColor() == PieceColor::White) ? WHITE : BLACK;
 
                 auto it = d_drawers.find(currentPiece->getType());
@@ -98,22 +100,25 @@ void Renderer::drawPieces(const Board& board) {
         }
     }
 }
-void Renderer::drawTileHighlights(Position selectedPos, Position kingInCheckPos) {
+void Renderer::drawTileHighlights(Position selectedPos, Position kingInCheckPos, const Board& board, PieceColor currentColor) {
     if (selectedPos.x != -1 && selectedPos.y != -1) {
+        int displayY = (currentColor == PieceColor::Black) ? getFlippedY(selectedPos.y, board.getHeight()) : selectedPos.y;
         float posX = d_offsetX + (selectedPos.x * d_cellSize);
-        float posY = d_offsetY + (selectedPos.y * d_cellSize);
+        float posY = d_offsetY + (displayY * d_cellSize);
         DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, Config::Colors::HIGHLIGHT_COLOR); 
     }
     if (kingInCheckPos.x != -1 && kingInCheckPos.y != -1) {
+        int displayY = (currentColor == PieceColor::Black) ? getFlippedY(kingInCheckPos.y, board.getHeight()) : kingInCheckPos.y;
         float posX = d_offsetX + (kingInCheckPos.x * d_cellSize);
-        float posY = d_offsetY + (kingInCheckPos.y * d_cellSize);
+        float posY = d_offsetY + (displayY * d_cellSize);
         DrawRectangle((int)posX, (int)posY, (int)d_cellSize, (int)d_cellSize, Config::Colors::CHECK_HIGHLIGHT_COLOR); 
     }
 }
-void Renderer::drawMoveHints(const Board& board, const std::vector<Position>& validMoves) {
+void Renderer::drawMoveHints(const Board& board, const std::vector<Position>& validMoves, PieceColor currentColor) {
     for (const Position& move : validMoves) {
+        int displayY = (currentColor == PieceColor::Black) ? getFlippedY(move.y, board.getHeight()) : move.y;
         float centerX = d_offsetX + (move.x * d_cellSize) + (d_cellSize / 2.0f);
-        float centerY = d_offsetY + (move.y * d_cellSize) + (d_cellSize / 2.0f);
+        float centerY = d_offsetY + (displayY * d_cellSize) + (d_cellSize / 2.0f);
         if (board.getTile(move).hasPiece() || move == board.getEnPassantTarget()) {
             DrawRing({centerX, centerY}, d_cellSize/2.0f - 8.0f, d_cellSize/2.0f - 2.0f, 0, 360, 32, {0, 0, 0, 100});
         } else {
@@ -122,7 +127,7 @@ void Renderer::drawMoveHints(const Board& board, const std::vector<Position>& va
     }
 }
 void Renderer::drawPromotionMenu(PieceColor color, const PromotionMenu& menu) const {
-    DrawRectangle(0, 0, Config::Graphics::CONFIG_WINDOW_WIDTH, Config::Graphics::CONFIG_WINDOW_HEIGHT, { 0, 0, 0, 150 }); 
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), { 0, 0, 0, 150 }); 
 
     float boxSize = (float)menu.getBoxSize();
     float startX = (float)menu.getStartX(); 
@@ -183,12 +188,18 @@ void Renderer::drawEffects(const std::vector<VisualEffect>& effects) {
         }
     }
 }
-void Renderer::drawHands(const std::vector<Player>& players) const {
-        d_cardRenderer.drawHands(players, GetMouseX(), GetMouseY());
+void Renderer::updateLayout(float cellSize, float offsetX, float offsetY) {
+    d_cellSize = cellSize;
+    d_offsetX = offsetX;
+    d_offsetY = offsetY;
 }
 
-int Renderer::getClickedCardIndex(int playerIndex, int numCards, int mouseX, int mouseY) const {
-    return d_cardRenderer.getClickedCardIndex(playerIndex, numCards, mouseX, mouseY);
+void Renderer::drawHands(const Player& player) const {
+        d_cardRenderer.drawHands(player, GetMouseX(), GetMouseY());
+}
+
+int Renderer::getClickedCardIndex(int numCards, int mouseX, int mouseY) const {
+    return d_cardRenderer.getClickedCardIndex(numCards, mouseX, mouseY);
 }
 void Renderer::drawFogLayer(const Board& board, Position selectedTile, const std::vector<Position>& currentValidMoves, PieceColor currentColor) {
     for (int x = 0; x < board.getWidth(); ++x) {
@@ -211,8 +222,9 @@ void Renderer::drawFogLayer(const Board& board, Position selectedTile, const std
                     }
                 }
                 if (!isRevealed) {
+                    int displayY = (currentColor == PieceColor::Black) ? getFlippedY(y, board.getHeight()) : y;
                     float cornerX = d_offsetX + (x * d_cellSize);
-                    float cornerY = d_offsetY + (y * d_cellSize);
+                    float cornerY = d_offsetY + (displayY * d_cellSize);
                     DrawRectangle((int)cornerX, (int)cornerY, (int)d_cellSize, (int)d_cellSize, Config::Colors::FOG_COLOR);
                     DrawText("?", cornerX + d_cellSize/2 - 10, cornerY + d_cellSize/2 - 15, 30, DARKGRAY);
                 }
@@ -221,15 +233,10 @@ void Renderer::drawFogLayer(const Board& board, Position selectedTile, const std
     }
 }
 void Renderer::drawScore(int whiteScore, int blackScore) {
-    DrawText(TextFormat("Score: %d", whiteScore), 900, 600, 20, GOLD);
-    DrawText(TextFormat("Score: %d", blackScore), 900, 200, 20, GOLD);
+    DrawText(TextFormat("Score: %d", whiteScore), GetScreenWidth() - 160, GetScreenHeight() - 40, 20, GOLD);
+    DrawText(TextFormat("Score: %d", blackScore), GetScreenWidth() - 160, 20, 20, GOLD);
 }
 void Renderer::drawShop(const Shop& shop, const ShopMenu& menu, bool isShopOpen) {
-    Rectangle btn = getShopButtonBounds();
-    DrawRectangleRec(btn, DARKGRAY);
-    DrawRectangleLinesEx(btn, 2, GOLD);
-    DrawText("BOUTIQUE", btn.x + 15, btn.y + 10, 20, GOLD);
-
     if (isShopOpen) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), { 0, 0, 0, 180 });
         
@@ -238,7 +245,8 @@ void Renderer::drawShop(const Shop& shop, const ShopMenu& menu, bool isShopOpen)
         DrawRectangleRec(panel, RAYWHITE);
         DrawRectangleLinesEx(panel, 4, GOLD);
         
-        DrawText("MARCHE DU CHAOS", menu.getPanelX() + 220, menu.getPanelY() + 20, 30, BLACK);
+        int titleWidth = MeasureText("MARCHE DU CHAOS", 30);
+        DrawText("MARCHE DU CHAOS", menu.getPanelX() + (menu.getPanelWidth() - titleWidth) / 2, menu.getPanelY() + 20, 30, BLACK);
 
         const auto& cards = shop.getCards();
         for (size_t i = 0; i < cards.size(); ++i) {
