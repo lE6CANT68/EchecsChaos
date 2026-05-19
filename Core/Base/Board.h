@@ -26,9 +26,13 @@ class Board{
         Position getKingPosition(PieceColor color) const;
         bool isKingInCheck(PieceColor kingColor) const;
 
+        PieceType getLastMovedPieceType() const { return d_lastMovedPieceType; }
+        void setLastMovedPieceType(PieceType type) { d_lastMovedPieceType = type; }
+
     private:
         std::vector<std::vector<Tile>> d_grid;
         int d_width;
         int d_height;
-        Position d_enPassantTarget = {-1, -1};
+        Position d_enPassantTarget = Position::NONE;
+        PieceType d_lastMovedPieceType = PieceType::Pawn;
 };

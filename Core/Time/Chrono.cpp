@@ -1,4 +1,4 @@
-#include "../Core/Time/Chono.h"
+#include "Chrono.h"
 
 Chrono::Chrono(float initialTimeMinutes, float incrementSeconds) {
     d_timeRemaining = initialTimeMinutes * 60.0f; 
@@ -25,9 +25,20 @@ const char* Chrono::getFormattedTime() const {
     int secs = (int)d_timeRemaining % 60;
     return TextFormat("%02d:%02d", mins, secs); 
 }
+const char* Chrono::getScrambledTime() const {
+    SetRandomSeed((unsigned int)(GetTime() * 10.0)); 
+    
+    int randomMins = GetRandomValue(0, 99);
+    int randomSecs = GetRandomValue(0, 59);
+    
+    SetRandomSeed((unsigned int)(GetTime() * 1000.0)); 
+    
+    return TextFormat("%02d:%02d", randomMins, randomSecs);
+}
 void Chrono::setTime(float newTime){
     d_timeRemaining = newTime;
 }
 void Chrono::setIncrement(float newIncrement){
     d_increment = newIncrement;
 }
+void Chrono::addTime(float seconds) { d_timeRemaining += seconds; };

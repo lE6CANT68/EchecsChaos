@@ -18,6 +18,10 @@ std::vector<Position> King::getValidMoves(Position currentPos, const Board& boar
         if (board.isinBounds(targetPos)) {
             
             const Tile& tile = board.getTile(targetPos);
+
+            if (!tile.isWalkable()) {
+                break; 
+            }
             
             if (!tile.hasPiece() || tile.getPiece()->getColor() != this->getColor()) {
                 moves.push_back(targetPos);

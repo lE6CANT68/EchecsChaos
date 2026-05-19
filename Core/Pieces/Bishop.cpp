@@ -18,6 +18,10 @@ std::vector<Position> Bishop::getValidMoves(Position currentPos, const Board& bo
             
             const Tile& tile = board.getTile(checkPos);
 
+            if (!tile.isWalkable()) {
+                break; 
+            }
+            
             if (!tile.hasPiece()) {
                 moves.push_back(checkPos);
             } 

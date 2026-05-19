@@ -18,6 +18,10 @@ std::vector<Position> Rook::getValidMoves(Position currentPos, const Board& boar
         while (board.isinBounds(checkPos)) {
             const Tile& tile = board.getTile(checkPos);
 
+            if (!tile.isWalkable()) {
+                break; 
+            }
+
             if (!tile.hasPiece()) {
                 moves.push_back(checkPos);
             } 

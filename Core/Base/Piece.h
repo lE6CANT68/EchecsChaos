@@ -14,7 +14,8 @@ enum class PieceType{
     Knight,
     Rook,
     King,
-    Queen
+    Queen,
+    Chameleon //Special
 };
 
 class Piece{
@@ -30,9 +31,12 @@ class Piece{
         bool hasMoved() const { return d_hasMoved; }
         void setHasMoved(bool moved) { d_hasMoved = moved; }
 
+
+
        virtual std::vector<Position> getValidMoves(Position currentPos,const Board& board)const = 0;
     private:
         PieceColor d_color;
         PieceType d_type;
         bool d_hasMoved;
+        
 };

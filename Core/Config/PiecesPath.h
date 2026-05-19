@@ -19,4 +19,6 @@ namespace PiecePaths{
         constexpr const char* ROOK_WHITE = "../assets/Pieces/w_rook.png"; 
         constexpr const char* ROOK_BLACK = "../assets/Pieces/b_rook.png";
 
+        
+
 }

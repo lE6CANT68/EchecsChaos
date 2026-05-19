@@ -15,39 +15,61 @@
 #include "../Graphics/UI/PromotionMenu.h"
 #include "../Graphics/VisualEffect.h"
 
+#include "CardRenderer.h"
+
+#include "../Core/Config/Constant.h"
+
+#include "../Core/Engine/Shop.h"
+#include "../Graphics/UI/ShopMenu.h"
+
 
 
 
 class Renderer {
 public:
-    Renderer(float cellSize = CELL_SIZE);
-    static constexpr float CELL_SIZE = 80.0f;
+    Renderer(float cellSize);
 
-
-    void draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,Position kingInCheckPos = {-1, -1});
+    void updateLayout(float cellSize, float offsetX, float offsetY);
+    void draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,int whiteScore, int blackScore,Position kingInCheckPos = Position::NONE);
     void drawPromotionMenu(PieceColor color,const PromotionMenu& menu) const;
-    void drawChrono(const char* whiteTime, const char* blackTime, PieceColor currentTurn);
+    void drawChrono(const char* whiteTime, const char* blackTime, PieceColor currentTurn, int offsetX, int offsetY);
     void drawEffects(const std::vector<VisualEffect>& effects);
+    void drawHands(const Player& player) const ;
+    void drawScore(int whiteScore, int blackScore);
+    void drawShop(const Shop& shop, const ShopMenu& menu, bool isShopOpen);
+    
+
+    int getClickedCardIndex(int numCards, int mouseX, int mouseY) const;
+    Rectangle getShopPanelBounds() const { return { 150, 100, 700, 400 }; } // Le menu central
+
+
 
 private:
     float d_cellSize;
-    float d_margin;
+    float d_offsetX;
+    float d_offsetY;
 
     std::map<PieceType, std::unique_ptr<PieceDrawer>> d_drawers;
 
+    int getFlippedY(int y, int boardHeight) const { return boardHeight - 1 - y; }
 
-    void drawBoard(const Board& board);
-    void drawPieces(const Board& board);
-    void drawTileHighlights(Position selectedPos, Position kingInCheckPos);
-    void drawMoveHints(const Board& board, const std::vector<Position>& validMoves);
+    void drawBoard(const Board& board, PieceColor currentColor);
+    void drawPieces(const Board& board, PieceColor currentColor);
+    void drawTileHighlights(Position selectedPos, Position kingInCheckPos, const Board& board, PieceColor currentColor);
+    void drawMoveHints(const Board& board, const std::vector<Position>& validMoves, PieceColor currentColor);
+    void drawTileDecoration(TileType type, float posX, float posY) const;
+    void drawFogLayer(const Board& board, Position selectedTile, const std::vector<Position>& currentValidMoves, PieceColor currentColor);
     
     
+    
+
 
     
    
-    static constexpr float DEFAULT_MARGIN = 50.0f;
+
     static constexpr float FALLBACK_PIECE_RADIUS = 20.0f;
     static constexpr float VALID_MOVE_RADIUS = 15.0f;
-    static constexpr Color HIGHLIGHT_COLOR = { 46, 204, 113, 150 }; 
-    static constexpr Color HINT_COLOR = { 0, 0, 0, 70 };
+
+
+    CardRenderer d_cardRenderer;
 };

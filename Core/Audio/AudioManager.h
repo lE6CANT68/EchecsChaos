@@ -1,5 +1,7 @@
 #pragma once
 #include "raylib.h"
+#include "../Core/Config/AudioPath.h"
+#include "../Config/Constant.h"
 
 class AudioManager {
 public:
@@ -8,16 +10,20 @@ public:
     
     void playMove() const;
     void playCapture() const;
+    void playButtonPress() const;
     void playMusic() const;
     void playGameOver() const;
     void playVictory() const;
     void playStalemate() const;
 
-    void updateMusic() const;
+    void setVolume(float volume);
+
+    Music getMusic() const { return d_music; }
 
 private:
     Sound d_soundMove;
     Sound d_soundCapture;
+    Sound d_soundButtonPress;
     Sound d_soundVictory;
     Sound d_soundGameOver;
     Sound d_soundStalemate;

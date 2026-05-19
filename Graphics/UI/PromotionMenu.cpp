@@ -1,9 +1,18 @@
 #include "PromotionMenu.h"
 
+
 PromotionMenu::PromotionMenu(const std::vector<PieceType>& options) 
-    : d_options(options), d_boxSize(100), d_startY(350) 
+    : d_options(options), 
+      d_boxSize(Config::Graphics::PROMOTION_BOX_SIZE), 
+      d_startX(0),
+      d_startY(Config::Graphics::PROMOTION_MENU_Y) 
 {
-    d_startX = (800 - (d_options.size() * d_boxSize)) / 2;
+    
+}
+
+void PromotionMenu::updateLayout(int boardStartX, int boardWidth) {
+    int menuWidth = (int)d_options.size() * d_boxSize;
+    d_startX = boardStartX + (boardWidth - menuWidth) / 2;
 }
 
 std::optional<PieceType> PromotionMenu::getClickedPiece(int mouseX, int mouseY) const {

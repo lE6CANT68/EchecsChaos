@@ -53,10 +53,11 @@ public:
     const char* getMessage() const override { 
         return d_message; 
     }
+    EventRarity getRarity() const override { return EventRarity::Rare; }
 
 private:
     const AudioManager& d_audio;
-    Position d_target = {-1, -1};
+    Position d_target = Position::NONE;
     bool d_isActive = false;
     const char* d_message = "";
 };
