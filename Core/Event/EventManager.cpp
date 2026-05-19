@@ -22,26 +22,26 @@ EventManager::EventManager(const AudioManager& audio)
    });
    d_eventGenerators.push_back([this]() {
         return std::make_unique<SlipperyTerrainEvent>(this->d_audio);
-
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<MeteoriteEvent>(this->d_audio);
-    });
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<FreezeEvent>(Position::NONE, Config::Event::FREEZE_EVENT_DURATION, this->d_audio);
-    });
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<ObstacleEvent>(Position::NONE, Config::Event::OBSTACLE_EVENT_DURATION, this->d_audio);
-    });
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<FogEvent>(Position::NONE, Config::Event::FOG_EVENT_DURATION, this->d_audio);
-    });
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<HideTimeEvent>(PlayerTarget::Both, Config::Event::HIDE_TIME_EVENT_DURATION, this->d_audio);
-    });
-    d_eventGenerators.push_back([this]() {
-        return std::make_unique<ChameleonEvent>(this->d_audio);
-    });
-    
+   });
+     d_eventGenerators.push_back([this]() {
+         return std::make_unique<MeteoriteEvent>(this->d_audio);
+     });
+     d_eventGenerators.push_back([this]() {
+         return std::make_unique<FreezeEvent>(Position::NONE, Config::Event::FREEZE_EVENT_DURATION, this->d_audio);
+     });
+     d_eventGenerators.push_back([this]() {
+         return std::make_unique<ObstacleEvent>(Position::NONE, Config::Event::OBSTACLE_EVENT_DURATION, this->d_audio);
+     });
+     d_eventGenerators.push_back([this]() {
+         return std::make_unique<FogEvent>(Position::NONE, Config::Event::FOG_EVENT_DURATION, this->d_audio);
+     });
+     d_eventGenerators.push_back([this]() {
+         return std::make_unique<HideTimeEvent>(PlayerTarget::Both, Config::Event::HIDE_TIME_EVENT_DURATION, this->d_audio);
+     });
+     d_eventGenerators.push_back([this]() {
+         return std::make_unique<ChameleonEvent>(this->d_audio);
+     });
+     
 }
 
 void EventManager::update() {
