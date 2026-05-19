@@ -106,7 +106,27 @@ void GameEngine::handleInput(Position clickedPos) {
                 if (finalPos.x == -1) continue; // Mouvement échoué
 
                 // --- APPLIQUER LA GLISSADE SI TERRAIN GLISSANT ---
-                applySlipperyTerrain(d_selectedTile, finalPos);
+                if (d_board.isSlipperyTerrainActive()) {
+                    int dirX = 0, dirY = 0;
+                    if (finalPos.x > d_selectedTile.x) dirX = 1;
+                    else if (finalPos.x < d_selectedTile.x) dirX = -1;
+                    if (finalPos.y > d_selectedTile.y) dirY = 1;
+                    else if (finalPos.y < d_selectedTile.y) dirY = -1;
+                    
+                    if (dirX == 0 || dirY == 0) { // Pas de glissade en diagonale
+                        Position currentPos = finalPos;
+                        while (true) {
+                            Position nextPos = {currentPos.x + dirX, currentPos.y + dirY};
+                            if (!d_board.isinBounds(nextPos) || d_board.getTile(nextPos).hasPiece() || !d_board.getTile(nextPos).isWalkable()) {
+                                break;
+                            }
+                            std::unique_ptr<Piece> pieceToSlide = d_board.getTile(currentPos).releasePiece();
+                            d_board.getTile(nextPos).setPiece(std::move(pieceToSlide));
+                            currentPos = nextPos;
+                        }
+                        finalPos = currentPos;
+                    }
+                }
 
                 // --- FEEDBACK SONORE ---
                 if (isCapture) {
@@ -116,8 +136,11 @@ void GameEngine::handleInput(Position clickedPos) {
                 }
 
                 // --- PROMOTION ET FIN DE TOUR ---
-                bool promotes = checkPromotion(finalPos);
-                if (!promotes) {
+                bool promotes = PromotionHandler::checkPromotion(d_board, finalPos);
+                if (promotes) {
+                    d_isPromoting = true;
+                    d_promotionPos = finalPos;
+                } else {
                     d_players[d_currentPlayerIndex].getClock().addIncrement();
                     d_players[d_currentPlayerIndex].resetTurn();
                     
@@ -192,37 +215,11 @@ void GameEngine::updateEnPassantTarget(Position startPos, Position targetPos) {
     Piece* pieceToMove = d_board.getTile(startPos).getPiece();
 
     if (pieceToMove->getType() == PieceType::Pawn && abs(targetPos.y - startPos.y) == 2) {
-    PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
-
-    bool moveExecuted = BoardInteractionManager::tryExecuteMove(d_board, clickedPos, d_selectedTile, d_currentValidMoves, d_audioManager,d_players[d_currentPlayerIndex]);
-
-    if (moveExecuted) {
-        d_currentValidMoves.clear();
-
-        if (PromotionHandler::checkPromotion(d_board, clickedPos)) {
-            d_isPromoting = true;
-            d_promotionPos = clickedPos;
-        } else {
-            d_players[d_currentPlayerIndex].getClock().addIncrement();
-            d_players[d_currentPlayerIndex].resetTurn(); 
-            d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
-            updateGameState();
-
-            if (d_gameState == GameState::Playing) {
-                d_eventManager.processActiveEvents(d_board);
-                d_eventManager.triggerRandomEvent(d_board);
-            }
-        }
+        int dir = (targetPos.y > startPos.y) ? -1 : 1;
+        d_board.setEnPassantTarget({startPos.x, targetPos.y + dir});
     } else {
-        BoardInteractionManager::updateSelection(d_board, clickedPos, currentColor, d_selectedTile, d_currentValidMoves);
+        d_board.setEnPassantTarget({-1, -1});
     }
-}
-
-
-    d_players[d_currentPlayerIndex].resetTurn();
-
-    endPlayerTurn();
-    updateGameState();
 }
 
 void GameEngine::updateGameState() {
@@ -273,10 +270,7 @@ std::vector<Position> GameEngine::filterLegalMoves(Position startPos, const std:
     bool isKing = (myPiece->getType() == PieceType::King);
     bool currentlyInCheck = d_board.isKingInCheck(myColor);
 
-void GameEngine::run() {
-    while (!WindowShouldClose() && !d_shouldQuit) {
-        updateSystems(); 
-        
+    for (const Position& targetPos : pseudoMoves) {
         if (d_board.getTile(targetPos).hasPiece() && d_board.getTile(targetPos).getPiece()->getColor() == myColor) {
             continue; 
         }
@@ -296,6 +290,29 @@ void GameEngine::run() {
             if (backupCrossed) d_board.getTile(crossedPos).setPiece(std::move(backupCrossed));
             
             if (!isCrossedSafe) continue; 
+        }
+
+        std::unique_ptr<Piece> backupTarget = d_board.getTile(targetPos).releasePiece();
+        std::unique_ptr<Piece> pieceToMove = d_board.getTile(startPos).releasePiece();
+        
+        d_board.getTile(targetPos).setPiece(std::move(pieceToMove));
+        bool isSafe = !d_board.isKingInCheck(myColor);
+        
+        pieceToMove = d_board.getTile(targetPos).releasePiece();
+        d_board.getTile(startPos).setPiece(std::move(pieceToMove));
+        if (backupTarget) d_board.getTile(targetPos).setPiece(std::move(backupTarget));
+        
+        if (isSafe) {
+            legalMoves.push_back(targetPos);
+        }
+    }
+    return legalMoves;
+}
+
+void GameEngine::run() {
+    while (!WindowShouldClose() && !d_shouldQuit) {
+        updateSystems(); 
+        
         if (d_gameState == GameState::Playing) {
             processInput(); 
         } else if (d_gameState == GameState::TitleScreen) {
@@ -430,18 +447,14 @@ void GameEngine::updateSystems() {
 void GameEngine::processInput() {
     Player& currentPlayer = d_players[d_currentPlayerIndex];
 
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            int mouseX = GetMouseX();
-            int mouseY = GetMouseY();
-            bool actionExecuted = false;
-            
-            // Synchroniser les dimensions avec le Renderer
-            d_cellSize = d_renderer.getCellSize();
-            d_offsetX = d_renderer.getOffsetX();
-            d_offsetY = d_renderer.getOffsetY();
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         int mouseX = GetMouseX();
         int mouseY = GetMouseY();
+
+        d_cellSize = d_renderer.getCellSize();
+        d_offsetX = d_renderer.getOffsetX();
+        d_offsetY = d_renderer.getOffsetY();
+
         if (d_shopButton.update(mouseX, mouseY, true)) {
             d_audioManager.playButtonPress();
             d_isShopOpen = !d_isShopOpen;
@@ -541,7 +554,7 @@ void GameEngine::processInput() {
                     d_promotionPos = Position::NONE;
                     currentPlayer.getClock().addIncrement();
                     currentPlayer.resetTurn();
-                    d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
+                    endPlayerTurn();
                     updateGameState();
                 }
             } else {
@@ -652,104 +665,44 @@ void GameEngine::endPlayerTurn() {
     
     // Tous les 2 tours de joueurs (après Blanc et Noir), le canard joue
     if (d_turnCount % 2 == 0) {
-        moveDuckTurn();
+        Position duckPos = {-1, -1};
+        for (int y = 0; y < d_board.getHeight(); ++y) {
+            for (int x = 0; x < d_board.getWidth(); ++x) {
+                Position pos = {x, y};
+                const Tile& tile = d_board.getTile(pos);
+                if (tile.hasPiece() && tile.getPiece()->getType() == PieceType::Duck) {
+                    duckPos = pos;
+                    break;
+                }
+            }
+            if (duckPos.x != -1) break;
+        }
+        
+        if (duckPos.x != -1) {
+            Piece* duckPiece = d_board.getTile(duckPos).getPiece();
+            std::vector<Position> validMoves = duckPiece->getValidMoves(duckPos, d_board);
+            
+            if (!validMoves.empty()) {
+                int randomIdx = GetRandomValue(0, validMoves.size() - 1);
+                Position newPos = validMoves[randomIdx];
+                
+                if (d_board.getTile(newPos).hasPiece()) d_board.getTile(newPos).releasePiece();
+                
+                std::unique_ptr<Piece> duck = d_board.getTile(duckPos).releasePiece();
+                d_board.getTile(newPos).setPiece(std::move(duck));
+                
+                d_audioManager.playMove();
+            }
+        }
+        d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
     } else {
         // Sinon, on passe simplement au joueur suivant
         d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
     }
 }
 
-void GameEngine::applySlipperyTerrain(Position startPos, Position& finalPos) {
-    // Si le terrain glissant n'est pas actif, ne rien faire
-    if (!d_board.isSlipperyTerrainActive()) {
-        return;
-    }
-    
-    // Déterminer la direction du mouvement
-    int dirX = 0, dirY = 0;
-    
-    if (finalPos.x > startPos.x) dirX = 1;
-    else if (finalPos.x < startPos.x) dirX = -1;
-    
-    if (finalPos.y > startPos.y) dirY = 1;
-    else if (finalPos.y < startPos.y) dirY = -1;
-    
-    // Si le mouvement est diagonal, pas de glissade (seuls les mouvements lignes/colonnes)
-    if ((dirX != 0 && dirY != 0)) {
-        return; // Mouvement diagonal : pas de glissade
-    }
-    
-    // La pièce continue dans sa direction jusqu'à blocage
-    Position currentPos = finalPos;
-    
-    while (true) {
-        Position nextPos = {currentPos.x + dirX, currentPos.y + dirY};
-        
-        // Vérifier les limites du plateau
-        if (!d_board.isinBounds(nextPos)) {
-            break;
-        }
-        
-        // Vérifier si la case suivante a une pièce
-        if (d_board.getTile(nextPos).hasPiece()) {
-            // Blocage ! La pièce s'arrête à la position actuelle
-            break;
-        }
-        
-        // Vérifier si la case suivante est walkable
-        if (!d_board.getTile(nextPos).isWalkable()) {
-            // Obstacle ! La pièce s'arrête à la position actuelle
-            break;
-        }
-        
-        // Déplacer la pièce
-        std::unique_ptr<Piece> piece = d_board.getTile(currentPos).releasePiece();
-        d_board.getTile(nextPos).setPiece(std::move(piece));
-        currentPos = nextPos;
-    }
-    
-    // Mettre à jour la position finale
-    finalPos = currentPos;
+void GameEngine::applySlipperyTerrain(Position startPos, Position targetPos) {
+    // Fonction conservée pour correspondre à la déclaration dans GameEngine.h,
+    // mais la vraie logique a été intégrée directement dans handleInput()
+    // car elle a besoin de modifier finalPos par référence.
 }
-
-void GameEngine::moveDuckTurn() {
-    // Chercher le canard sur le plateau
-    Position duckPos = {-1, -1};
-    for (int y = 0; y < d_board.getHeight(); ++y) {
-        for (int x = 0; x < d_board.getWidth(); ++x) {
-            Position pos = {x, y};
-            const Tile& tile = d_board.getTile(pos);
-            if (tile.hasPiece() && tile.getPiece()->getType() == PieceType::Duck) {
-                duckPos = pos;
-                break;
-            }
-        }
-        if (duckPos.x != -1) break;
-    }
-    
-    // Si le canard existe, le déplacer aléatoirement
-    if (duckPos.x != -1) {
-        Piece* duckPiece = d_board.getTile(duckPos).getPiece();
-        std::vector<Position> validMoves = duckPiece->getValidMoves(duckPos, d_board);
-        
-        if (!validMoves.empty()) {
-            int randomIdx = GetRandomValue(0, validMoves.size() - 1);
-            Position newPos = validMoves[randomIdx];
-            
-            // Capture éventuelle
-            if (d_board.getTile(newPos).hasPiece()) {
-                d_board.getTile(newPos).releasePiece();
-            }
-            
-            // Déplacement du canard
-            std::unique_ptr<Piece> duck = d_board.getTile(duckPos).releasePiece();
-            d_board.getTile(newPos).setPiece(std::move(duck));
-            
-            d_audioManager.playMove();
-        }
-    }
-    
-    // Après que le canard ait joué, passer au joueur suivant
-    d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
-}
-

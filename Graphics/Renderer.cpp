@@ -66,16 +66,16 @@ void Renderer::updateDimensionsForBoard(const Board& board) {
     }
 }
 
-void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,Position kingInCheckPos) {
+void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,int whiteScore, int blackScore,Position kingInCheckPos) {
     updateDimensionsForBoard(board);
-    drawBoard(board);
+    drawBoard(board, currentColor);
     drawBoardBorder(board);
     drawPortals(board);
-    drawTileHighlights(selectedPos, kingInCheckPos); 
-    drawPieces(board);
-    drawMoveHints(board, validMoves);   
-    drawFogLayer(board, selectedPos, validMoves,currentColor);
-    
+    drawTileHighlights(selectedPos, kingInCheckPos, board, currentColor); 
+    drawPieces(board, currentColor);
+    drawMoveHints(board, validMoves, currentColor);   
+    drawFogLayer(board, selectedPos, validMoves, currentColor);
+    drawScore(whiteScore, blackScore);
 }
 void Renderer::drawBoard(const Board& board, PieceColor currentColor) {
     for (int x = 0; x < board.getWidth(); ++x) {
@@ -278,7 +278,7 @@ void Renderer::drawHands(const Player& player) const {
 }
 
 int Renderer::getClickedCardIndex(int numCards, int mouseX, int mouseY) const {
-    return d_cardRenderer.getClickedCardIndex(numCards, mouseX, mouseY);
+    return d_cardRenderer.getClickedCardIndex(0, numCards, mouseX, mouseY);
 }
 void Renderer::drawPortals(const Board& board) {
     for (int x = 0; x < board.getWidth(); ++x) {

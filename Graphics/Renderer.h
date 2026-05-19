@@ -63,8 +63,6 @@ private:
     int d_offsetY;
     int d_lastBoardWidth = 8; // Pour détecter les changements de taille
     bool d_initializedDimensions = false; // Initialisation faite une fois
-    float d_offsetX;
-    float d_offsetY;
 
     std::map<PieceType, std::unique_ptr<PieceDrawer>> d_drawers;
 

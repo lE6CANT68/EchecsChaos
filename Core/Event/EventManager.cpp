@@ -41,7 +41,12 @@ EventManager::EventManager(const AudioManager& audio)
      d_eventGenerators.push_back([this]() {
          return std::make_unique<ChameleonEvent>(this->d_audio);
      });
-     
+     d_eventGenerators.push_back([this]() {
+         return std::make_unique<PionDebileEvent>(this->d_audio);
+     });
+     d_eventGenerators.push_back([this]() {
+         return std::make_unique<LavaWallEvent>(generateRandomWall(), 5, this->d_audio);
+     });
 }
 
 void EventManager::update() {
@@ -164,7 +169,7 @@ std::vector<Position> EventManager::generateRandomWall() {
 std::unique_ptr<Event> EventManager::generateRandomEvent(EventRarity rarity) {
     switch (rarity) {
         case EventRarity::Common: {
-            int roll = GetRandomValue(0, 2);
+            int roll = GetRandomValue(0, 3);
             switch (roll) {
                 case 0:
                     return std::make_unique<FreezeEvent>(Position::NONE, Config::Event::FREEZE_EVENT_DURATION, d_audio);
@@ -172,25 +177,35 @@ std::unique_ptr<Event> EventManager::generateRandomEvent(EventRarity rarity) {
                     return std::make_unique<ObstacleEvent>(Position::NONE, Config::Event::OBSTACLE_EVENT_DURATION, d_audio);
                 case 2:
                     return std::make_unique<FogEvent>(Position::NONE, Config::Event::FOG_EVENT_DURATION, d_audio);
+                case 3:
+                    return std::make_unique<PionDebileEvent>(d_audio);
                 default:
                     return std::make_unique<FreezeEvent>(Position::NONE, Config::Event::FREEZE_EVENT_DURATION, d_audio);
             }
         }
         case EventRarity::Rare: {
-            int roll = GetRandomValue(0, 2);
+            int roll = GetRandomValue(0, 3);
             switch (roll) {
                 case 0:
                     return std::make_unique<MeteoriteEvent>(d_audio);
                 case 1:
-                    return std::make_unique<ObstacleEvent>(Position::NONE, Config::Event::OBSTACLE_EVENT_DURATION, d_audio);
+                    return std::make_unique<IdiotEvent>(d_audio);
                 case 2:
-                    return std::make_unique<FogEvent>(Position::NONE, Config::Event::FOG_EVENT_DURATION, d_audio);
+                    return std::make_unique<PortalEvent>(d_audio);
+                case 3:
+                    return std::make_unique<SlipperyTerrainEvent>(d_audio);
                 default:
                     return std::make_unique<MeteoriteEvent>(d_audio);
             }
         }
         case EventRarity::Epic: {
-            return std::make_unique<HideTimeEvent>(PlayerTarget::Both, Config::Event::HIDE_TIME_EVENT_DURATION, d_audio);
+            int roll = GetRandomValue(0, 2);
+            switch (roll) {
+                case 0: return std::make_unique<HideTimeEvent>(PlayerTarget::Both, Config::Event::HIDE_TIME_EVENT_DURATION, d_audio);
+                case 1: return std::make_unique<DuckEvent>(d_audio);
+                case 2: return std::make_unique<ExpandBoardEvent>(d_audio);
+                default: return std::make_unique<HideTimeEvent>(PlayerTarget::Both, Config::Event::HIDE_TIME_EVENT_DURATION, d_audio);
+            }
         }
         case EventRarity::Legendary: {
             int roll = GetRandomValue(0, 1);

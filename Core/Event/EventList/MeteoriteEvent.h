@@ -68,7 +68,6 @@ public:
     EventRarity getRarity() const override {
         return EventRarity::Rare; 
     }
-    EventRarity getRarity() const override { return EventRarity::Rare; }
 
 private:
     const AudioManager& d_audio;

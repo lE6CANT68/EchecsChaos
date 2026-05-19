@@ -31,11 +31,7 @@ public:
     const char* getMessage() const override { 
         return d_message; 
     }
-    EventRarity getRarity() const override { return EventRarity::Common; }
-
-    EventRarity getRarity() const override {
-        return EventRarity::Epic; 
-    }
+    EventRarity getRarity() const override { return EventRarity::Epic; }
 
 private:
     Player& d_targetPlayer;

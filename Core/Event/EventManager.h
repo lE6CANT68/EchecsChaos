@@ -50,14 +50,13 @@ public:
 private:
     float d_messageTimer = 0.0f;
     std::vector<Position> generateRandomWall();
-    float d_messageTimer;
-    const char* d_currentMessage;
+    std::string d_currentMessage;
 
     std::vector<std::unique_ptr<Event>> d_activeEvents;
 
     std::vector<std::function<std::unique_ptr<Event>()>> d_eventGenerators;
 
-    int d_eventProbability = 5; 
+    int d_eventProbability = 100; 
 
     const AudioManager& d_audio;
     bool d_boardHasExpanded = false; // Track si l'événement d'expansion s'est produit 

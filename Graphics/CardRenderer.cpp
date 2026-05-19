@@ -54,14 +54,13 @@ void CardRenderer::drawHands(const Player& currentPlayer, int mouseX, int mouseY
     int tooltipX = 0;
     int tooltipY = 0;
 
-    for (int p = 0; p < players.size(); ++p) {
-        const auto& hand = players[p].getHand();
+    const auto& hand = currentPlayer.getHand();
         int n = hand.size();
-        if (n == 0) continue;
+    if (n > 0) {
         
         int totalWidth = (n * d_cardWidth) + ((n - 1) * d_cardSpacing);
         int startX = (screenWidth - totalWidth) / 2;
-        int baseY = (p == 0) ? (screenHeight - d_cardHeight - 20) : 20;
+        int baseY = screenHeight - d_cardHeight - 20;
 
         for (int i = 0; i < n; ++i) {
             int cardX = startX + i * (d_cardWidth + d_cardSpacing);
@@ -94,7 +93,7 @@ void CardRenderer::drawGradientBackground(int x, int y, Color rarityColor) const
     Color darkColor = { (unsigned char)(rarityColor.r / 3), (unsigned char)(rarityColor.g / 3), (unsigned char)(rarityColor.b / 3), 255 };
     
     // Diviser en 10 bandes horizontales pour un dégradé smooth
-    int bandHeight = CARD_HEIGHT / 10;
+    int bandHeight = d_cardHeight / 10;
     for (int i = 0; i < 10; ++i) {
         // Interpoler la couleur entre darkColor et rarityColor
         float t = (float)i / 10.0f;
@@ -105,7 +104,7 @@ void CardRenderer::drawGradientBackground(int x, int y, Color rarityColor) const
             255
         };
         
-        Rectangle band = { (float)x, (float)(y + i * bandHeight), (float)CARD_WIDTH, (float)bandHeight };
+        Rectangle band = { (float)x, (float)(y + i * bandHeight), (float)d_cardWidth, (float)bandHeight };
         DrawRectangleRounded(band, 0.15f, 10, bandColor);
     }
 }

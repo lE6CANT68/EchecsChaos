@@ -104,6 +104,13 @@ private:
 
     const char* getPlayerTimeString(int playerIndex);
 
+    void handleCastling(Position startPos, Position targetPos);
+    void handleEnPassant(Position startPos, Position targetPos);
+    void updateEnPassantTarget(Position startPos, Position targetPos);
+    void applySlipperyTerrain(Position startPos, Position targetPos);
+    void endPlayerTurn();
+    std::vector<Position> filterLegalMoves(Position startPos, const std::vector<Position>& pseudoMoves);
+
     Position d_firstTarget = Position::NONE;
     Shop d_shop;
     ShopMenu d_shopMenu;
