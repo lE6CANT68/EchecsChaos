@@ -33,6 +33,10 @@ public:
     }
     EventRarity getRarity() const override { return EventRarity::Common; }
 
+    EventRarity getRarity() const override {
+        return EventRarity::Epic; 
+    }
+
 private:
     Player& d_targetPlayer;
     float d_timeToAdd;

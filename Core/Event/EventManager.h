@@ -11,6 +11,13 @@
 #include "../Core/Event/EventList/FreezeEvent.h"
 #include "../Core/Event/EventList/ObstacleEvent.h"
 #include "../Core/Event/EventList/FogEvent.h"
+#include "../Core/Event/EventList/IdiotEvent.h"
+#include "../Core/Event/EventList/DuckEvent.h"
+#include "../Core/Event/EventList/PionDebileEvent.h"
+#include "../Core/Event/EventList/PortalEvent.h"
+
+#include "../Core/Event/EventList/SlipperyTerrainEvent.h"
+#include "../Core/Event/EventList/ExpandBoardEvent.h"
 #include "../Core/Event/EventList/HideTimeEvent.h"
 #include "../Core/Event/EventList/ChameleonEvent.h"
 #include "../Core/Event/EventList/LavaWallEvent.h"
@@ -41,6 +48,7 @@ public:
     std::unique_ptr<Event> generateRandomEvent(EventRarity rarity);
 
 private:
+    float d_messageTimer = 0.0f;
     std::vector<Position> generateRandomWall();
     float d_messageTimer;
     const char* d_currentMessage;
@@ -51,5 +59,6 @@ private:
 
     int d_eventProbability = 5; 
 
-    const AudioManager& d_audio; 
+    const AudioManager& d_audio;
+    bool d_boardHasExpanded = false; // Track si l'événement d'expansion s'est produit 
 };

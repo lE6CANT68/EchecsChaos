@@ -7,6 +7,7 @@ class Board;
 enum class PieceColor{
     White,
     Black,
+    Neutral
 };
 enum class PieceType{
     Pawn,

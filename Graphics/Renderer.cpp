@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include <algorithm>
 
 Renderer::Renderer(float cellSize) : d_cellSize(cellSize), d_offsetX(Config::Graphics::DEFAULT_OFFSETX), d_offsetY(Config::Graphics::DEFAULT_OFFSETY) {
     d_drawers[PieceType::Pawn] = std::make_unique<PawnDrawer>();
@@ -7,15 +8,73 @@ Renderer::Renderer(float cellSize) : d_cellSize(cellSize), d_offsetX(Config::Gra
     d_drawers[PieceType::Rook] = std::make_unique<RookDrawer>();
     d_drawers[PieceType::King] = std::make_unique<KingDrawer>();
     d_drawers[PieceType::Queen] = std::make_unique<QueenDrawer>();
+    d_drawers[PieceType::Idiot] = std::make_unique<IdiotDrawer>();
+    d_drawers[PieceType::PionDebile] = std::make_unique<PionDebileDrawer>();
+    d_drawers[PieceType::Duck] = std::make_unique<DuckDrawer>();
 }
 
-void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,int whiteScore, int blackScore,Position kingInCheckPos) {
-    drawBoard(board, currentColor);
-    drawTileHighlights(selectedPos, kingInCheckPos, board, currentColor); 
-    drawPieces(board, currentColor);
-    drawMoveHints(board, validMoves, currentColor);   
-    drawFogLayer(board, selectedPos, validMoves, currentColor);
-    drawScore(whiteScore,blackScore);
+void Renderer::updateDimensionsForBoard(const Board& board) {
+    int currentWidth = board.getWidth();
+    int currentHeight = board.getHeight();
+    
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+    
+    // Initialiser les dimensions une seule fois (dès que Raylib est prêt)
+    if (!d_initializedDimensions && screenWidth > 0 && screenHeight > 0) {
+        d_initializedDimensions = true;
+        d_lastBoardWidth = currentWidth;
+        
+        int availableHeight = screenHeight - 250; // Moins d'espace réservé
+        int availableWidth = screenWidth - 80;
+        
+        float maxCellSize = std::min(
+            availableWidth / (float)currentWidth,
+            availableHeight / (float)currentHeight
+        );
+        
+        d_cellSize = maxCellSize;
+        d_offsetX = (screenWidth - (currentWidth * d_cellSize)) / 2.0f;
+        d_offsetY = (screenHeight - (currentHeight * d_cellSize)) / 2.0f; // Centrage parfait
+    }
+    
+    // Si la taille du board a changé, recalculer les dimensions
+    if (currentWidth != d_lastBoardWidth && screenWidth > 0 && screenHeight > 0) {
+        d_lastBoardWidth = currentWidth;
+        
+        // Réserver de l'espace pour les cartes
+        int availableHeight = screenHeight - 250; // Espace pour cartes haut/bas
+        int availableWidth = screenWidth - 80;    // marges latérales
+        
+        // Calculer la taille maximale d'une cellule pour remplir l'espace
+        float maxCellSize = std::min(
+            availableWidth / (float)currentWidth,
+            availableHeight / (float)currentHeight
+        );
+        
+        // Définir la taille de cellule et les offsets pour centrer le plateau
+        d_cellSize = maxCellSize;
+        d_offsetX = (screenWidth - (currentWidth * d_cellSize)) / 2.0f;
+        d_offsetY = (screenHeight - (currentHeight * d_cellSize)) / 2.0f; // Centrage parfait
+        
+        // Redimensionner les cartes aussi
+        if (currentWidth == 10) {
+            d_cardRenderer.updateCardDimensions(10);
+        } else {
+            d_cardRenderer.updateCardDimensions(8);
+        }
+    }
+}
+
+void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,Position kingInCheckPos) {
+    updateDimensionsForBoard(board);
+    drawBoard(board);
+    drawBoardBorder(board);
+    drawPortals(board);
+    drawTileHighlights(selectedPos, kingInCheckPos); 
+    drawPieces(board);
+    drawMoveHints(board, validMoves);   
+    drawFogLayer(board, selectedPos, validMoves,currentColor);
     
 }
 void Renderer::drawBoard(const Board& board, PieceColor currentColor) {
@@ -34,6 +93,26 @@ void Renderer::drawBoard(const Board& board, PieceColor currentColor) {
             drawTileDecoration(board.getTile({x, y}).getType(), posX, posY);
         }
     }
+}
+
+void Renderer::drawBoardBorder(const Board& board) {
+    // Calculer les coordonnées de la bordure
+    float startX = d_offsetX;
+    float startY = d_offsetY;
+    float endX = d_offsetX + (board.getWidth() * d_cellSize);
+    float endY = d_offsetY + (board.getHeight() * d_cellSize);
+    
+    // Dessiner les 4 côtés de la bordure avec une ligne épaisse
+    float borderThickness = 4.0f;
+    
+    // Haut
+    DrawLineEx({startX, startY}, {endX, startY}, borderThickness, DARKGRAY);
+    // Bas
+    DrawLineEx({startX, endY}, {endX, endY}, borderThickness, DARKGRAY);
+    // Gauche
+    DrawLineEx({startX, startY}, {startX, endY}, borderThickness, DARKGRAY);
+    // Droite
+    DrawLineEx({endX, startY}, {endX, endY}, borderThickness, DARKGRAY);
 }
 
 void Renderer::drawTileDecoration(TileType type, float posX, float posY) const {
@@ -201,6 +280,21 @@ void Renderer::drawHands(const Player& player) const {
 int Renderer::getClickedCardIndex(int numCards, int mouseX, int mouseY) const {
     return d_cardRenderer.getClickedCardIndex(numCards, mouseX, mouseY);
 }
+void Renderer::drawPortals(const Board& board) {
+    for (int x = 0; x < board.getWidth(); ++x) {
+        for (int y = 0; y < board.getHeight(); ++y) {
+            Position pos = {x, y};
+            
+            if (board.isPortal(pos)) {
+                float centerX = d_offsetX + (x * d_cellSize) + (d_cellSize / 2.0f);
+                float centerY = d_offsetY + (y * d_cellSize) + (d_cellSize / 2.0f);
+                
+                PortalDrawer::draw(centerX, centerY, d_cellSize);
+            }
+        }
+    }
+}
+
 void Renderer::drawFogLayer(const Board& board, Position selectedTile, const std::vector<Position>& currentValidMoves, PieceColor currentColor) {
     for (int x = 0; x < board.getWidth(); ++x) {
         for (int y = 0; y < board.getHeight(); ++y) {

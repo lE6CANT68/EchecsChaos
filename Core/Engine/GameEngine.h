@@ -87,6 +87,7 @@ private:
 
     std::vector<Player> d_players;
     int d_currentPlayerIndex;
+    int d_turnCount = 0; // Compte les tours pour savoir quand faire jouer le canard
 
     void initBoard();
     void handleInput(Position clickedPos);

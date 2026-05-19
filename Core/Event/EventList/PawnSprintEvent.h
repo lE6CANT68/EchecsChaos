@@ -17,8 +17,10 @@ public:
     void step(Board& board) override { d_isActive = false; }
     bool isFinished() const override { return !d_isActive; }
     const char* getMessage() const override { return d_message; }
-    EventRarity getRarity() const override { return EventRarity::Common; }
-
+    
+    EventRarity getRarity() const override {
+        return EventRarity::Common; 
+    }
 private:
     Piece* d_pawn;
     bool d_isActive = false;

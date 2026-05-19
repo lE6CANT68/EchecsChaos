@@ -77,6 +77,7 @@ int GameEngine::getFlippedBoardY(int boardY) const {
 }
 
 void GameEngine::handleInput(Position clickedPos) {
+    // 1. Sécurité de base : clic hors plateau ou case gelée
     if (!d_board.isinBounds(clickedPos)) return;
     if (d_board.getTile(clickedPos).getType() == TileType::Frozen) {
         d_selectedTile = Position::NONE;
@@ -84,6 +85,113 @@ void GameEngine::handleInput(Position clickedPos) {
         return; 
     }
 
+    bool moveExecuted = false;
+    PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
+
+    // 2. TENTATIVE DE MOUVEMENT (Si une pièce est déjà sélectionnée)
+    if (d_selectedTile.x != -1 && d_selectedTile.y != -1) {
+        for (const Position& validMove : d_currentValidMoves) {
+            if (clickedPos.x == validMove.x && clickedPos.y == validMove.y) { 
+
+                bool isCapture = d_board.getTile(clickedPos).hasPiece();
+                
+                // --- LOGIQUE SPÉCIALE AVANT MOUVEMENT ---
+                handleCastling(d_selectedTile, clickedPos);
+                handleEnPassant(d_selectedTile, clickedPos);
+                updateEnPassantTarget(d_selectedTile, clickedPos);
+
+                // --- EXÉCUTION DU MOUVEMENT ---
+                // movePieceWithPortal gère la téléportation et retourne la position réelle
+                Position finalPos = d_board.movePieceWithPortal(d_selectedTile, clickedPos);
+                if (finalPos.x == -1) continue; // Mouvement échoué
+
+                // --- APPLIQUER LA GLISSADE SI TERRAIN GLISSANT ---
+                applySlipperyTerrain(d_selectedTile, finalPos);
+
+                // --- FEEDBACK SONORE ---
+                if (isCapture) {
+                    d_audioManager.playCapture();
+                } else {
+                    d_audioManager.playMove();
+                }
+
+                // --- PROMOTION ET FIN DE TOUR ---
+                bool promotes = checkPromotion(finalPos);
+                if (!promotes) {
+                    d_players[d_currentPlayerIndex].getClock().addIncrement();
+                    d_players[d_currentPlayerIndex].resetTurn();
+                    
+                    endPlayerTurn();
+                    
+                    updateGameState();
+
+                    if (d_gameState == GameState::Playing) {
+                        d_eventManager.processActiveEvents(d_board);
+                        d_eventManager.triggerRandomEvent(d_board);
+                    }
+                }
+
+                // Reset de l'état de sélection
+                d_selectedTile = {-1, -1};
+                d_currentValidMoves.clear();
+                moveExecuted = true;
+                break;
+            }
+        }
+    }
+
+    // 3. SÉLECTION D'UNE PIÈCE (Si aucun mouvement n'a été validé ci-dessus)
+    if (!moveExecuted) {
+        const Tile& tile = d_board.getTile(clickedPos);
+        
+        if (tile.hasPiece() && (tile.getPiece()->getColor() == currentColor || tile.getPiece()->getType() == PieceType::Idiot)) {
+            d_selectedTile = clickedPos;
+            // On calcule les coups légaux (filtre les échecs au roi)
+            std::vector<Position> pseudoMoves = tile.getPiece()->getValidMoves(clickedPos, d_board);
+            d_currentValidMoves = filterLegalMoves(clickedPos, pseudoMoves);
+        } else {
+            // Clic sur case vide ou ennemie : on nettoie la sélection
+            d_selectedTile = {-1, -1};
+            d_currentValidMoves.clear();
+        }
+    }
+}
+
+void GameEngine::handleCastling(Position startPos, Position targetPos) {
+    Piece* pieceToMove = d_board.getTile(startPos).getPiece();
+    
+
+    if (pieceToMove->getType() != PieceType::King || abs(targetPos.x - startPos.x) != 2) {
+        return; 
+    }
+    
+    if (targetPos.x == 6) { 
+        //  Castle 
+        d_board.movePiece({7, targetPos.y}, {5, targetPos.y});
+        d_board.getTile({5, targetPos.y}).getPiece()->setHasMoved(true);
+    } 
+    else if (targetPos.x == 2) { 
+        // Big Castle 
+        d_board.movePiece({0, targetPos.y}, {3, targetPos.y});
+        d_board.getTile({3, targetPos.y}).getPiece()->setHasMoved(true);
+    }
+}
+void GameEngine::handleEnPassant(Position startPos, Position targetPos) {
+    Piece* pieceToMove = d_board.getTile(startPos).getPiece();
+
+    if (pieceToMove->getType() != PieceType::Pawn || targetPos != d_board.getEnPassantTarget()) {
+        return;
+    }
+
+    Position enemyPawnPos = { targetPos.x, startPos.y };
+
+    d_board.getTile(enemyPawnPos).setPiece(nullptr); 
+}
+
+void GameEngine::updateEnPassantTarget(Position startPos, Position targetPos) {
+    Piece* pieceToMove = d_board.getTile(startPos).getPiece();
+
+    if (pieceToMove->getType() == PieceType::Pawn && abs(targetPos.y - startPos.y) == 2) {
     PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
 
     bool moveExecuted = BoardInteractionManager::tryExecuteMove(d_board, clickedPos, d_selectedTile, d_currentValidMoves, d_audioManager,d_players[d_currentPlayerIndex]);
@@ -111,6 +219,11 @@ void GameEngine::handleInput(Position clickedPos) {
 }
 
 
+    d_players[d_currentPlayerIndex].resetTurn();
+
+    endPlayerTurn();
+    updateGameState();
+}
 
 void GameEngine::updateGameState() {
     bool hasAnyLegalMove = false;
@@ -152,11 +265,37 @@ void GameEngine::updateGameState() {
         }
     }
 }
+std::vector<Position> GameEngine::filterLegalMoves(Position startPos, const std::vector<Position>& pseudoMoves) {
+    std::vector<Position> legalMoves;
+    Piece* myPiece = d_board.getTile(startPos).getPiece();
+    PieceColor myColor = d_players[d_currentPlayerIndex].getColor();
+
+    bool isKing = (myPiece->getType() == PieceType::King);
+    bool currentlyInCheck = d_board.isKingInCheck(myColor);
 
 void GameEngine::run() {
     while (!WindowShouldClose() && !d_shouldQuit) {
         updateSystems(); 
         
+        if (d_board.getTile(targetPos).hasPiece() && d_board.getTile(targetPos).getPiece()->getColor() == myColor) {
+            continue; 
+        }
+
+        if (isKing && abs(targetPos.x - startPos.x) == 2) {
+            if (currentlyInCheck) continue; 
+            int step = (targetPos.x > startPos.x) ? 1 : -1; 
+            Position crossedPos = { startPos.x + step, startPos.y };
+
+            std::unique_ptr<Piece> backupCrossed = d_board.getTile(crossedPos).releasePiece();
+            std::unique_ptr<Piece> kingToMove = d_board.getTile(startPos).releasePiece();
+            
+            d_board.getTile(crossedPos).setPiece(std::move(kingToMove));
+            bool isCrossedSafe = !d_board.isKingInCheck(myColor);
+            kingToMove = d_board.getTile(crossedPos).releasePiece();
+            d_board.getTile(startPos).setPiece(std::move(kingToMove));
+            if (backupCrossed) d_board.getTile(crossedPos).setPiece(std::move(backupCrossed));
+            
+            if (!isCrossedSafe) continue; 
         if (d_gameState == GameState::Playing) {
             processInput(); 
         } else if (d_gameState == GameState::TitleScreen) {
@@ -291,6 +430,15 @@ void GameEngine::updateSystems() {
 void GameEngine::processInput() {
     Player& currentPlayer = d_players[d_currentPlayerIndex];
 
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            int mouseX = GetMouseX();
+            int mouseY = GetMouseY();
+            bool actionExecuted = false;
+            
+            // Synchroniser les dimensions avec le Renderer
+            d_cellSize = d_renderer.getCellSize();
+            d_offsetX = d_renderer.getOffsetX();
+            d_offsetY = d_renderer.getOffsetY();
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         int mouseX = GetMouseX();
         int mouseY = GetMouseY();
@@ -497,5 +645,111 @@ void GameEngine::renderFrame() {
         }
         
     EndDrawing();
+}
+
+void GameEngine::endPlayerTurn() {
+    d_turnCount++;
+    
+    // Tous les 2 tours de joueurs (après Blanc et Noir), le canard joue
+    if (d_turnCount % 2 == 0) {
+        moveDuckTurn();
+    } else {
+        // Sinon, on passe simplement au joueur suivant
+        d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
+    }
+}
+
+void GameEngine::applySlipperyTerrain(Position startPos, Position& finalPos) {
+    // Si le terrain glissant n'est pas actif, ne rien faire
+    if (!d_board.isSlipperyTerrainActive()) {
+        return;
+    }
+    
+    // Déterminer la direction du mouvement
+    int dirX = 0, dirY = 0;
+    
+    if (finalPos.x > startPos.x) dirX = 1;
+    else if (finalPos.x < startPos.x) dirX = -1;
+    
+    if (finalPos.y > startPos.y) dirY = 1;
+    else if (finalPos.y < startPos.y) dirY = -1;
+    
+    // Si le mouvement est diagonal, pas de glissade (seuls les mouvements lignes/colonnes)
+    if ((dirX != 0 && dirY != 0)) {
+        return; // Mouvement diagonal : pas de glissade
+    }
+    
+    // La pièce continue dans sa direction jusqu'à blocage
+    Position currentPos = finalPos;
+    
+    while (true) {
+        Position nextPos = {currentPos.x + dirX, currentPos.y + dirY};
+        
+        // Vérifier les limites du plateau
+        if (!d_board.isinBounds(nextPos)) {
+            break;
+        }
+        
+        // Vérifier si la case suivante a une pièce
+        if (d_board.getTile(nextPos).hasPiece()) {
+            // Blocage ! La pièce s'arrête à la position actuelle
+            break;
+        }
+        
+        // Vérifier si la case suivante est walkable
+        if (!d_board.getTile(nextPos).isWalkable()) {
+            // Obstacle ! La pièce s'arrête à la position actuelle
+            break;
+        }
+        
+        // Déplacer la pièce
+        std::unique_ptr<Piece> piece = d_board.getTile(currentPos).releasePiece();
+        d_board.getTile(nextPos).setPiece(std::move(piece));
+        currentPos = nextPos;
+    }
+    
+    // Mettre à jour la position finale
+    finalPos = currentPos;
+}
+
+void GameEngine::moveDuckTurn() {
+    // Chercher le canard sur le plateau
+    Position duckPos = {-1, -1};
+    for (int y = 0; y < d_board.getHeight(); ++y) {
+        for (int x = 0; x < d_board.getWidth(); ++x) {
+            Position pos = {x, y};
+            const Tile& tile = d_board.getTile(pos);
+            if (tile.hasPiece() && tile.getPiece()->getType() == PieceType::Duck) {
+                duckPos = pos;
+                break;
+            }
+        }
+        if (duckPos.x != -1) break;
+    }
+    
+    // Si le canard existe, le déplacer aléatoirement
+    if (duckPos.x != -1) {
+        Piece* duckPiece = d_board.getTile(duckPos).getPiece();
+        std::vector<Position> validMoves = duckPiece->getValidMoves(duckPos, d_board);
+        
+        if (!validMoves.empty()) {
+            int randomIdx = GetRandomValue(0, validMoves.size() - 1);
+            Position newPos = validMoves[randomIdx];
+            
+            // Capture éventuelle
+            if (d_board.getTile(newPos).hasPiece()) {
+                d_board.getTile(newPos).releasePiece();
+            }
+            
+            // Déplacement du canard
+            std::unique_ptr<Piece> duck = d_board.getTile(duckPos).releasePiece();
+            d_board.getTile(newPos).setPiece(std::move(duck));
+            
+            d_audioManager.playMove();
+        }
+    }
+    
+    // Après que le canard ait joué, passer au joueur suivant
+    d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
 }
 
