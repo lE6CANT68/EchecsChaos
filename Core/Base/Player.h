@@ -21,9 +21,15 @@ public:
 
     const std::vector<std::unique_ptr<Card>>& getHand() const;
     void drawCard(std::unique_ptr<Card> newCard);
-    void playCard(int handIndex, Board& board, EventManager& eventManager,Position target = {-1, -1});
+    bool playCard(int handIndex, Board& board, EventManager& eventManager,Position target = {-1, -1});
+    void removeCardFromHand(int handIndex);
+    void markCardAsPlayed();
     bool hasPlayedCardThisTurn() const;
     void resetTurn();
+
+    void addScore(int points);
+    int getScore() const;
+    void spendScore(int amount);
 
 private:
     PieceColor d_color;
@@ -31,4 +37,5 @@ private:
     int d_points;
     bool d_hasPlayedCardThisTurn;
     std::vector<std::unique_ptr<Card>> d_hand; 
+    int d_score = 0;
 };

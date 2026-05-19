@@ -28,7 +28,6 @@ class Tile {
         std::unique_ptr<Piece> releasePiece() { return std::move(d_currentPiece); }
 
         bool isWalkable() const { return d_type != TileType::Blocked && d_type != TileType::Frozen; }
-        
         bool isFoggy() const { return d_isFoggy; }
         void setFoggy(bool fog) { d_isFoggy = fog; }
         

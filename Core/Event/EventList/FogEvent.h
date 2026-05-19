@@ -57,6 +57,8 @@ public:
         return EventRarity::Rare; 
     }
 
+    EventRarity getRarity() const override { return EventRarity::Rare; }
+
 private:
     Position d_target;
     int d_duration;

@@ -1,24 +1,37 @@
 #include "GameEngine.h"
+#include <iostream>
 
 
 
 GameEngine::GameEngine(int cellSize) 
     : d_board(8, 8), 
       d_renderer(cellSize), 
-      d_selectedTile({-1, -1}),
+      d_selectedTile(Position::NONE),
       d_cellSize(cellSize),
-      d_offsetX(Renderer::DEFAULT_OFFSETX),  
-      d_offsetY(Renderer::DEFAULT_OFFSETY),
+      d_offsetX(Config::Graphics::DEFAULT_OFFSETX),  
+      d_offsetY(Config::Graphics::DEFAULT_OFFSETY),
       d_promotionMenu({BASE_PROMOTIONS}),
-
+      d_settingsScreen(d_settings),
       d_eventManager{d_audioManager}
 {
+    // Appliquer les paramètres chargés
+    d_settings.applySettings();
+    updateBoardLayout();
+    d_audioManager.setVolume(d_settings.getMusicVolume());
+
+    d_titleScreen.setButtonClickCallback([this](){ d_audioManager.playButtonPress(); });
+    d_settingsScreen.setButtonClickCallback([this](){ d_audioManager.playButtonPress(); });
+
     d_players.push_back(Player(PieceColor::White, Chrono::STANDARD_TIME, Chrono::STANDARD_INCREMENT));
     d_players.push_back(Player(PieceColor::Black, Chrono::STANDARD_TIME, Chrono::STANDARD_INCREMENT));
     d_currentPlayerIndex = 0;
 
     fillPlayerHand(d_players[0]);
     fillPlayerHand(d_players[1]);
+
+    for(int i=0; i<5; i++) {
+    d_shop.addCard(generateRandomCard()); 
+}
     
     initBoard();
 
@@ -26,39 +39,48 @@ GameEngine::GameEngine(int cellSize)
 }
 
 void GameEngine::initBoard() {
-    //Pawn placement for both
-    for (int i = 0; i < 8; ++i) {
-        d_board.getTile({i, 1}).setPiece(std::make_unique<Pawn>(PieceColor::Black));
-        d_board.getTile({i, 6}).setPiece(std::make_unique<Pawn>(PieceColor::White));
+    const int bBack = Config::Board::BLACK_BACK_ROW;
+    const int bPawn = Config::Board::BLACK_PAWN_ROW;
+    const int wPawn = Config::Board::WHITE_PAWN_ROW;
+    const int wBack = Config::Board::WHITE_BACK_ROW;
+    for (int i = 0; i < Config::Board::WIDTH; ++i) {
+        d_board.getTile({i, bPawn}).setPiece(std::make_unique<Pawn>(PieceColor::Black));
+        d_board.getTile({i, wPawn}).setPiece(std::make_unique<Pawn>(PieceColor::White));
     }
 
-    // Black pieces
-    d_board.getTile({0, 0}).setPiece(std::make_unique<Rook>(PieceColor::Black));
-    d_board.getTile({1, 0}).setPiece(std::make_unique<Knight>(PieceColor::Black));
-    d_board.getTile({2, 0}).setPiece(std::make_unique<Bishop>(PieceColor::Black));
-    d_board.getTile({3, 0}).setPiece(std::make_unique<Queen>(PieceColor::Black));
-    d_board.getTile({4, 0}).setPiece(std::make_unique<King>(PieceColor::Black));
-    d_board.getTile({5, 0}).setPiece(std::make_unique<Bishop>(PieceColor::Black));
-    d_board.getTile({6, 0}).setPiece(std::make_unique<Knight>(PieceColor::Black));
-    d_board.getTile({7, 0}).setPiece(std::make_unique<Rook>(PieceColor::Black));
+    // Pièces Noires
+    d_board.getTile({0, bBack}).setPiece(std::make_unique<Rook>(PieceColor::Black));
+    d_board.getTile({1, bBack}).setPiece(std::make_unique<Knight>(PieceColor::Black));
+    d_board.getTile({2, bBack}).setPiece(std::make_unique<Bishop>(PieceColor::Black));
+    d_board.getTile({3, bBack}).setPiece(std::make_unique<Queen>(PieceColor::Black));
+    d_board.getTile({4, bBack}).setPiece(std::make_unique<King>(PieceColor::Black));
+    d_board.getTile({5, bBack}).setPiece(std::make_unique<Bishop>(PieceColor::Black));
+    d_board.getTile({6, bBack}).setPiece(std::make_unique<Knight>(PieceColor::Black));
+    d_board.getTile({7, bBack}).setPiece(std::make_unique<Rook>(PieceColor::Black));
 
-    // White pieces
-    d_board.getTile({0, 7}).setPiece(std::make_unique<Rook>(PieceColor::White));
-    d_board.getTile({1, 7}).setPiece(std::make_unique<Knight>(PieceColor::White));
-    d_board.getTile({2, 7}).setPiece(std::make_unique<Bishop>(PieceColor::White));
-    d_board.getTile({3, 7}).setPiece(std::make_unique<Queen>(PieceColor::White));
-    d_board.getTile({4, 7}).setPiece(std::make_unique<King>(PieceColor::White));
-    d_board.getTile({5, 7}).setPiece(std::make_unique<Bishop>(PieceColor::White));
-    d_board.getTile({6, 7}).setPiece(std::make_unique<Knight>(PieceColor::White));
-    d_board.getTile({7, 7}).setPiece(std::make_unique<Rook>(PieceColor::White));
+    // Pièces Blanches
+    d_board.getTile({0, wBack}).setPiece(std::make_unique<Rook>(PieceColor::White));
+    d_board.getTile({1, wBack}).setPiece(std::make_unique<Knight>(PieceColor::White));
+    d_board.getTile({2, wBack}).setPiece(std::make_unique<Bishop>(PieceColor::White));
+    d_board.getTile({3, wBack}).setPiece(std::make_unique<Queen>(PieceColor::White));
+    d_board.getTile({4, wBack}).setPiece(std::make_unique<King>(PieceColor::White));
+    d_board.getTile({5, wBack}).setPiece(std::make_unique<Bishop>(PieceColor::White));
+    d_board.getTile({6, wBack}).setPiece(std::make_unique<Knight>(PieceColor::White));
+    d_board.getTile({7, wBack}).setPiece(std::make_unique<Rook>(PieceColor::White));
+}
+
+int GameEngine::getFlippedBoardY(int boardY) const {
+    if (d_players[d_currentPlayerIndex].getColor() == PieceColor::Black) {
+        return d_board.getHeight() - 1 - boardY;
+    }
+    return boardY;
 }
 
 void GameEngine::handleInput(Position clickedPos) {
     // 1. Sécurité de base : clic hors plateau ou case gelée
     if (!d_board.isinBounds(clickedPos)) return;
-
     if (d_board.getTile(clickedPos).getType() == TileType::Frozen) {
-        d_selectedTile = {-1, -1};
+        d_selectedTile = Position::NONE;
         d_currentValidMoves.clear();
         return; 
     }
@@ -170,47 +192,32 @@ void GameEngine::updateEnPassantTarget(Position startPos, Position targetPos) {
     Piece* pieceToMove = d_board.getTile(startPos).getPiece();
 
     if (pieceToMove->getType() == PieceType::Pawn && abs(targetPos.y - startPos.y) == 2) {
+    PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
 
-        int skippedY = (startPos.y + targetPos.y) / 2;
-        d_board.setEnPassantTarget({ startPos.x, skippedY });
-    } 
-    else {
-        d_board.setEnPassantTarget({-1, -1});
-    }
-}
-bool GameEngine::checkPromotion(Position targetPos) {
-    Piece* piece = d_board.getTile(targetPos).getPiece();
-    
-    if (piece->getType() == PieceType::Pawn) {
-        if ((piece->getColor() == PieceColor::White && targetPos.y == 0) ||
-            (piece->getColor() == PieceColor::Black && targetPos.y == 7)) {
-            
+    bool moveExecuted = BoardInteractionManager::tryExecuteMove(d_board, clickedPos, d_selectedTile, d_currentValidMoves, d_audioManager,d_players[d_currentPlayerIndex]);
+
+    if (moveExecuted) {
+        d_currentValidMoves.clear();
+
+        if (PromotionHandler::checkPromotion(d_board, clickedPos)) {
             d_isPromoting = true;
-            d_promotionPos = targetPos;
-            return true;
+            d_promotionPos = clickedPos;
+        } else {
+            d_players[d_currentPlayerIndex].getClock().addIncrement();
+            d_players[d_currentPlayerIndex].resetTurn(); 
+            d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
+            updateGameState();
+
+            if (d_gameState == GameState::Playing) {
+                d_eventManager.processActiveEvents(d_board);
+                d_eventManager.triggerRandomEvent(d_board);
+            }
         }
+    } else {
+        BoardInteractionManager::updateSelection(d_board, clickedPos, currentColor, d_selectedTile, d_currentValidMoves);
     }
-    return false;
 }
-void GameEngine::handlePromotion(int mouseX, int mouseY) {
-    int boxSize = 100;
-    int startX = 200;
-    int startY = 350;
-    if (mouseY < startY || mouseY > startY + boxSize || mouseX < startX || mouseX > startX + (4 * boxSize)) {
-        return; 
-    }
 
-    PieceColor color = d_board.getTile(d_promotionPos).getPiece()->getColor();
-    int choice = (mouseX - startX) / boxSize;
-
-    if (choice == 0) d_board.getTile(d_promotionPos).setPiece(std::make_unique<Queen>(color));
-    else if (choice == 1) d_board.getTile(d_promotionPos).setPiece(std::make_unique<Rook>(color));
-    else if (choice == 2) d_board.getTile(d_promotionPos).setPiece(std::make_unique<Knight>(color));
-    else if (choice == 3) d_board.getTile(d_promotionPos).setPiece(std::make_unique<Bishop>(color));
-    d_isPromoting = false;
-    d_promotionPos = {-1, -1};
-
-    d_players[d_currentPlayerIndex].getClock().addIncrement();
 
     d_players[d_currentPlayerIndex].resetTurn();
 
@@ -227,11 +234,10 @@ void GameEngine::updateGameState() {
             
             const Tile& tile = d_board.getTile({x, y});
 
-            // On utilise currentColor au lieu du vieux d_currentTurn
             if (tile.hasPiece() && tile.getPiece()->getColor() == currentColor) {
 
                 std::vector<Position> pseudoMoves = tile.getPiece()->getValidMoves({x, y}, d_board);
-                std::vector<Position> legalMoves = filterLegalMoves({x, y}, pseudoMoves);
+                std::vector<Position> legalMoves = MoveValidator::filterLegalMoves(d_board,{x, y}, pseudoMoves);
 
                 if (!legalMoves.empty()) {
                     hasAnyLegalMove = true;
@@ -267,7 +273,9 @@ std::vector<Position> GameEngine::filterLegalMoves(Position startPos, const std:
     bool isKing = (myPiece->getType() == PieceType::King);
     bool currentlyInCheck = d_board.isKingInCheck(myColor);
 
-    for (const Position& targetPos : pseudoMoves) {
+void GameEngine::run() {
+    while (!WindowShouldClose() && !d_shouldQuit) {
+        updateSystems(); 
         
         if (d_board.getTile(targetPos).hasPiece() && d_board.getTile(targetPos).getPiece()->getColor() == myColor) {
             continue; 
@@ -288,46 +296,139 @@ std::vector<Position> GameEngine::filterLegalMoves(Position startPos, const std:
             if (backupCrossed) d_board.getTile(crossedPos).setPiece(std::move(backupCrossed));
             
             if (!isCrossedSafe) continue; 
+        if (d_gameState == GameState::Playing) {
+            processInput(); 
+        } else if (d_gameState == GameState::TitleScreen) {
+            d_titleScreen.update(GetMouseX(), GetMouseY(), IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            switch (d_titleScreen.getSelectedAction()) {
+                case TitleScreen::Action::Play:
+                    d_gameState = GameState::Playing;
+                    d_titleScreen.clearAction();
+                    break;
+                case TitleScreen::Action::Settings:
+                    d_gameState = GameState::Settings;
+                    d_settings.backupCurrentSettings(); // Sauvegarder l'état actuel
+                    d_titleScreen.clearAction();
+                    break;
+                case TitleScreen::Action::Quit:
+                    d_shouldQuit = true;
+                    d_titleScreen.clearAction();
+                    break;
+                default:
+                    break;
+            }
+        } else if (d_gameState == GameState::Settings) {
+            d_settingsScreen.update(GetMouseX(), GetMouseY(), IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
+            if (d_settingsScreen.getSelectedAction() == SettingsScreen::Action::Save) {
+                    d_settingsScreen.clearAction();
+                // Réappliquer les paramètres après sauvegarde
+                d_settings.applySettings();
+                updateBoardLayout();
+                d_audioManager.setVolume(d_settings.getMusicVolume());
+                // Retourner automatiquement à l'écran titre après sauvegarde
+                d_gameState = GameState::TitleScreen;
+            } else if (d_settingsScreen.getSelectedAction() == SettingsScreen::Action::Back) {
+                d_gameState = GameState::TitleScreen;
+                d_settingsScreen.clearAction();
+                // Annuler les changements en restaurant les paramètres sauvegardés
+                d_settings.restoreSettings();
+                d_settings.applySettings();
+                updateBoardLayout();
+                d_audioManager.setVolume(d_settings.getMusicVolume());
+            }
         }
+        
+        renderFrame(); 
+        
+    }
+}
 
-        std::unique_ptr<Piece> backupTarget = d_board.getTile(targetPos).releasePiece(); 
+std::unique_ptr<Card> GameEngine::generateRandomCard() {
+    int roll = GetRandomValue(0, 11); 
+    switch (roll) {
+        case 0: return std::make_unique<MeteoriteCard>();
+        case 1: return std::make_unique<TimeCard>();
+        case 2: return std::make_unique<BlockCard>();
+        case 3: return std::make_unique<PawnSprintCard>();
+        case 4: return std::make_unique<FreezeCard>();
+        case 5: return std::make_unique<FogCard>();
+        case 6: return std::make_unique<HideTimeCard>();
+        case 7: return std::make_unique<LavaWallCard>();
+        case 8: return std::make_unique<TeleportCard>();
+        case 9: return std::make_unique<MysteryCard>(EventRarity::Common);
+        case 10: return std::make_unique<MysteryCard>(EventRarity::Rare);
+        case 11: return std::make_unique<MysteryCard>(EventRarity::Epic);
+        case 12: return std::make_unique<MysteryCard>(EventRarity::Legendary);
+        default: return std::make_unique<MeteoriteCard>(); 
+    }
+}
 
-        std::unique_ptr<Piece> pieceToMove = d_board.getTile(startPos).releasePiece();
-        d_board.getTile(targetPos).setPiece(std::move(pieceToMove));
 
-        bool isSafe = !d_board.isKingInCheck(myColor);
+void GameEngine::fillPlayerHand(Player& player) {
+    while (player.getHand().size() < 3) {
+        player.drawCard(generateRandomCard());
+    }
+}
 
-        std::unique_ptr<Piece> pieceToReturn = d_board.getTile(targetPos).releasePiece();
-        d_board.getTile(startPos).setPiece(std::move(pieceToReturn));
+const char* GameEngine::getPlayerTimeString(int playerIndex) {
+    PieceColor color = d_players[playerIndex].getColor();
+    bool isHacked = false;
+    if (color == PieceColor::White) {
+        isHacked = d_eventManager.hasGlobalEffect(GlobalEffect::HideTimeWhite) || 
+                   d_eventManager.hasGlobalEffect(GlobalEffect::HideTimeBoth);
+    } 
+    else {
+        isHacked = d_eventManager.hasGlobalEffect(GlobalEffect::HideTimeBlack) || 
+                   d_eventManager.hasGlobalEffect(GlobalEffect::HideTimeBoth);
+    }
+    if (isHacked) {
+        return d_players[playerIndex].getClock().getScrambledTime();
+    } 
+    else {
+        return d_players[playerIndex].getClock().getFormattedTime();
+    }
+}
 
-        if (backupTarget) {
-            d_board.getTile(targetPos).setPiece(std::move(backupTarget));
-        }
+void GameEngine::updateBoardLayout() {
+    int screenWidth = GetScreenWidth();
+    int screenHeight = GetScreenHeight();
+    const int margin = 40;
+    const int maxBoardSize = static_cast<int>(Config::Graphics::BOARD_PIXEL_SIZE);
 
-        if (isSafe) {
-            legalMoves.push_back(targetPos); 
-        }
+    int boardSize = std::min({screenWidth - margin, screenHeight - margin, maxBoardSize});
+    if (boardSize < 8) {
+        boardSize = maxBoardSize;
     }
 
-    return legalMoves;
+    int cellSize = boardSize / Config::Board::WIDTH;
+    boardSize = cellSize * Config::Board::WIDTH;
+
+    d_cellSize = cellSize;
+    d_offsetX = (screenWidth - boardSize) / 2;
+    d_offsetY = (screenHeight - boardSize) / 2;
+
+    d_renderer.updateLayout((float)d_cellSize, (float)d_offsetX, (float)d_offsetY);
+    d_promotionMenu.updateLayout(d_offsetX, boardSize);
 }
-void GameEngine::run() {
-    while (!WindowShouldClose()) {
-        d_audioManager.updateMusic();
-        d_eventManager.update();
 
+void GameEngine::updateSystems() {
+    UpdateMusicStream(d_audioManager.getMusic()); // Mise à jour de la musique
+    d_eventManager.update();
+
+    if (d_gameState == GameState::Playing && !d_isPromoting) { 
         Player& currentPlayer = d_players[d_currentPlayerIndex];
-        PieceColor currentColor = currentPlayer.getColor();
+        currentPlayer.getClock().update();
+        
+        if (currentPlayer.getClock().isZero()) {
+            PieceColor currentColor = currentPlayer.getColor();
+            d_gameState = (currentColor == PieceColor::White) ? GameState::BlackWins : GameState::WhiteWins; 
+            d_audioManager.playGameOver();
+        }
+    }
+}
 
-        if (d_gameState == GameState::Playing) {
-            if (!d_isPromoting) { 
-                currentPlayer.getClock().update();
-                
-                if (currentPlayer.getClock().isZero()) {
-                    d_gameState = (currentColor == PieceColor::White) ? GameState::BlackWins : GameState::WhiteWins; 
-                    d_audioManager.playGameOver();
-                }
-            }
+void GameEngine::processInput() {
+    Player& currentPlayer = d_players[d_currentPlayerIndex];
 
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             int mouseX = GetMouseX();
@@ -338,139 +439,212 @@ void GameEngine::run() {
             d_cellSize = d_renderer.getCellSize();
             d_offsetX = d_renderer.getOffsetX();
             d_offsetY = d_renderer.getOffsetY();
-
-            // --- 1. SI ON EST DÉJÀ EN MODE CIBLAGE ---
-            if (d_isTargeting) {
-                int boardX = (mouseX - d_offsetX) / d_cellSize;
-                int boardY = (mouseY - d_offsetY) / d_cellSize;
-                Position targetPos = {boardX, boardY};
-
-                // On vérifie que le clic est sur le plateau, sur une case vide et normale
-                if (d_board.isinBounds(targetPos)) {
-                    currentPlayer.playCard(d_pendingCardIndex, d_board, d_eventManager, targetPos);
-                    fillPlayerHand(currentPlayer);
-                    d_isTargeting = false;
-                    d_pendingCardIndex = -1;
-                }
-                actionExecuted = true; // On a géré le clic, on bloque le reste
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        int mouseX = GetMouseX();
+        int mouseY = GetMouseY();
+        if (d_shopButton.update(mouseX, mouseY, true)) {
+            d_audioManager.playButtonPress();
+            d_isShopOpen = !d_isShopOpen;
+            return;
+        }
+        if (d_toggleHandButton.update(mouseX, mouseY, true)) {
+            d_audioManager.playButtonPress();
+            d_isHandVisible = !d_isHandVisible;
+            return; 
+        }
+        if (d_isShopOpen) {
+            d_shopMenu.updateLayout(GetScreenWidth(), GetScreenHeight(), d_shop.getCards().size());
+            // Si on clique en dehors du panneau central, on ferme la boutique
+            if (!d_shopMenu.isClickInsidePanel(mouseX, mouseY)) {
+                d_isShopOpen = false;
+                return;
             }
 
-            // --- 2. SI ON CLIQUE SUR UNE CARTE ---
-            else if (!currentPlayer.hasPlayedCardThisTurn()) {
-                int clickedCard = d_renderer.getClickedCardIndex(d_currentPlayerIndex, currentPlayer.getHand().size(), mouseX, mouseY);
-
-                if (clickedCard != -1) {
-                    // La carte a-t-elle besoin d'une cible ?
-                    if (currentPlayer.getHand()[clickedCard]->requiresTarget()) {
-                        // OUI : On active le mode ciblage !
-                        d_isTargeting = true;
-                        d_pendingCardIndex = clickedCard;
-                    } else {
-                        // NON : On la joue direct (ex: Météorite, Sablier)
-                        currentPlayer.playCard(clickedCard, d_board, d_eventManager);
-                        fillPlayerHand(currentPlayer);
-                    }
-                    actionExecuted = true;
+            // On demande au menu sur quelle carte on a cliqué
+            auto clickedIndex = d_shopMenu.getClickedCardIndex(mouseX, mouseY, d_shop.getCards().size());
+            
+            if (clickedIndex.has_value()) {
+                // Tentative d'achat
+                auto boughtCard = d_shop.buyCard(clickedIndex.value(), currentPlayer);
+                if (boughtCard) {
+                    currentPlayer.drawCard(std::move(boughtCard)); 
+                    // d_audioManager.playBuySound(); // Optionnel : bruit d'or
+                    d_shop.addCard(generateRandomCard());
                 }
             }
-
-            // --- 3. GESTION NORMALE DE L'ÉCHIQUIER ---
-            if (!actionExecuted && !d_isTargeting) {
-                if (d_isPromoting) {
-                    handlePromotion(mouseX, mouseY);
-                } else {
-                    int boardX = (mouseX - d_offsetX) / d_cellSize;
-                    int boardY = (mouseY - d_offsetY) / d_cellSize;
-                    handleInput({boardX, boardY});
-                }
-            }
+            
+            // On bloque le reste du code (pas de déplacement de pièces en arrière-plan)
+            return; 
         }
 
-    // ASTUCE : Clic Droit pour annuler le ciblage si le joueur change d'avis !
+        bool actionExecuted = false;
+        
+        if (d_isTargeting) {
+            int boardX = (mouseX - d_offsetX) / d_cellSize;
+            int boardY = (mouseY - d_offsetY) / d_cellSize;
+            boardY = getFlippedBoardY(boardY);
+            Position targetPos = {boardX, boardY};
+
+            if (d_board.isinBounds(targetPos)) {
+                Card* pendingCard = currentPlayer.getHand()[d_pendingCardIndex].get();
+                if (pendingCard->requiresTwoTargets()) {
+                    if (!d_firstTarget.isValid()) {
+                        if (pendingCard->isValidTarget(d_board, targetPos)) {
+                            d_firstTarget = targetPos; 
+                        }
+                    } else {
+                        if (pendingCard->isValidSecondTarget(d_board, d_firstTarget, targetPos)) {
+                            pendingCard->playTwoTargets(currentPlayer, d_board, d_eventManager, d_firstTarget, targetPos);
+                            currentPlayer.removeCardFromHand(d_pendingCardIndex);
+                            currentPlayer.markCardAsPlayed();
+                            fillPlayerHand(currentPlayer);
+                            d_isTargeting = false;
+                            d_pendingCardIndex = -1;
+                            d_firstTarget = Position::NONE; 
+                        }
+                    }
+                } 
+                else {
+                    if (pendingCard->isValidTarget(d_board, targetPos)) {
+                        pendingCard->play(currentPlayer, d_board, d_eventManager, targetPos);
+                        currentPlayer.removeCardFromHand(d_pendingCardIndex);
+                        currentPlayer.markCardAsPlayed();
+                        fillPlayerHand(currentPlayer);
+                        d_isTargeting = false;
+                        d_pendingCardIndex = -1;
+                    }
+                }
+            }
+            actionExecuted = true; 
+        }
+        else if (!currentPlayer.hasPlayedCardThisTurn() && d_isHandVisible) {
+            int clickedCard = d_renderer.getClickedCardIndex(currentPlayer.getHand().size(), mouseX, mouseY);
+
+            if (clickedCard != -1) {
+                if (currentPlayer.getHand()[clickedCard]->requiresTarget()) {
+                    d_isTargeting = true;
+                    d_pendingCardIndex = clickedCard;
+                } else {
+                    if (currentPlayer.playCard(clickedCard, d_board, d_eventManager)) {
+                        fillPlayerHand(currentPlayer);
+                    }
+                }
+                actionExecuted = true;
+            }
+        }
+        
+        if (!actionExecuted && !d_isTargeting) {
+            if (d_isPromoting) {
+                bool promotionSuccess = PromotionHandler::handlePromotion(d_board, d_promotionMenu, d_promotionPos, mouseX, mouseY);
+                if (promotionSuccess) {
+                    d_isPromoting = false;
+                    d_promotionPos = Position::NONE;
+                    currentPlayer.getClock().addIncrement();
+                    currentPlayer.resetTurn();
+                    d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
+                    updateGameState();
+                }
+            } else {
+                int boardX = (mouseX - d_offsetX) / d_cellSize;
+                int boardY = (mouseY - d_offsetY) / d_cellSize;
+                boardY = getFlippedBoardY(boardY);
+                handleInput({boardX, boardY}); 
+            }
+        }
+    }
+    else if (d_gameState == GameState::Settings) {
+        d_settingsScreen.draw();
+        return;
+    }
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && d_isTargeting) {
         d_isTargeting = false;
         d_pendingCardIndex = -1;
+        d_firstTarget = Position::NONE;
     }
+}
+void GameEngine::renderFrame() {
+    if (d_gameState == GameState::TitleScreen) {
+        d_titleScreen.draw();
+        return;
+    } else if (d_gameState == GameState::Settings) {
+        d_settingsScreen.draw();
+        return;
+    }
+
+    PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
+
+    std::vector<Position> globalVision;
+    for (int x = 0; x < d_board.getWidth(); ++x) {
+        for (int y = 0; y < d_board.getHeight(); ++y) {
+            Position p = {x, y};
+            const Tile& tile = d_board.getTile(p);
+            if (tile.hasPiece() && tile.getPiece()->getColor() == currentColor) {
+                std::vector<Position> vision = tile.getPiece()->getValidMoves(p, d_board);
+                globalVision.insert(globalVision.end(), vision.begin(), vision.end());
+            }
         }
-        std::vector<Position> globalVision;
-        for (int x = 0; x < d_board.getWidth(); ++x) {
-            for (int y = 0; y < d_board.getHeight(); ++y) {
-                Position p = {x, y};
-                const Tile& tile = d_board.getTile(p);
-                if (tile.hasPiece() && tile.getPiece()->getColor() == currentColor) {
-                    std::vector<Position> vision = tile.getPiece()->getValidMoves(p, d_board);
-                    globalVision.insert(globalVision.end(), vision.begin(), vision.end());
-                }
-            }
+    }
+
+    BeginDrawing();
+        ClearBackground(DARKGRAY);
+        
+        Position checkedKingPos = Position::NONE;
+        if (d_board.isKingInCheck(currentColor)) {
+            checkedKingPos = d_board.getKingPosition(currentColor);
         }
-        BeginDrawing();
-            ClearBackground(DARKGRAY);
-            
-            Position checkedKingPos = {-1, -1};
-            if (d_board.isKingInCheck(currentColor)) {
-                checkedKingPos = d_board.getKingPosition(currentColor);
-            }
-            d_renderer.draw(d_board, d_selectedTile, d_currentValidMoves, currentColor,checkedKingPos);
-            d_renderer.drawChrono(
-                d_players[0].getClock().getFormattedTime(), 
-                d_players[1].getClock().getFormattedTime(), 
-                currentColor,
-                d_offsetX,  
-                d_offsetY  
-            );
+        int whiteScore = d_players[0].getScore(); 
+        int blackScore = d_players[1].getScore();
 
-            std::vector<VisualEffect> chaosEffects = d_eventManager.getActiveVisualEffects();
-            d_renderer.drawEffects(chaosEffects);
+        d_renderer.draw(d_board, d_selectedTile, d_currentValidMoves, currentColor, whiteScore, blackScore, checkedKingPos);
+        d_renderer.drawChrono(getPlayerTimeString(0), getPlayerTimeString(1), currentColor, d_offsetX, d_offsetY);
 
-            if (d_eventManager.hasActiveMessage()) {
-                int textWidth = MeasureText(d_eventManager.getActiveMessage(), 25);
-                DrawRectangle(400 - (textWidth/2) - 10, 390, textWidth + 20, 40, {0, 0, 0, 180});
-                DrawText(d_eventManager.getActiveMessage(), 400 - (textWidth/2), 395, 25, RED);
-            }
+        std::vector<VisualEffect> chaosEffects = d_eventManager.getActiveVisualEffects();
+        d_renderer.drawEffects(chaosEffects);
 
-            if (d_isPromoting) {
-                PieceColor promoColor = d_board.getTile(d_promotionPos).getPiece()->getColor();
-                d_renderer.drawPromotionMenu(promoColor, d_promotionMenu);
-            }
-            
-            if (d_gameState != GameState::Playing) {
-                DrawRectangle(0, 0, 800, 800, { 0, 0, 0, 200 }); 
-                const char* message = "";
-                if (d_gameState == GameState::WhiteWins) message = "LES BLANCS GAGNENT !"; 
-                if (d_gameState == GameState::BlackWins) message = "LES NOIRS GAGNENT !";  
-                if (d_gameState == GameState::Stalemate) message = "PAT ! MATCH NUL !";
+        if (d_eventManager.hasActiveMessage()) {
+            int textWidth = MeasureText(d_eventManager.getActiveMessage(), 25);
+            DrawRectangle(400 - (textWidth/2) - 10, 390, textWidth + 20, 40, {0, 0, 0, 180});
+            DrawText(d_eventManager.getActiveMessage(), 400 - (textWidth/2), 395, 25, RED);
+        }
 
-                int textWidth = MeasureText(message, 30);
-                DrawText(message, 400 - (textWidth / 2), 380, 30, RAYWHITE);
-            }
-            d_renderer.drawHands(d_players);
-            if (d_isTargeting) {
+        if (d_isPromoting) {
+            PieceColor promoColor = d_board.getTile(d_promotionPos).getPiece()->getColor();
+            d_renderer.drawPromotionMenu(promoColor, d_promotionMenu);
+        }
+        
+        if (d_gameState != GameState::Playing) {
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), { 0, 0, 0, 200 }); 
+            const char* message = "";
+            if (d_gameState == GameState::WhiteWins) message = "LES BLANCS GAGNENT !"; 
+            if (d_gameState == GameState::BlackWins) message = "LES NOIRS GAGNENT !";  
+            if (d_gameState == GameState::Stalemate) message = "PAT ! MATCH NUL !";
+
+            int textWidth = MeasureText(message, 30);
+            DrawText(message, (GetScreenWidth() / 2) - (textWidth / 2), GetScreenHeight() / 2, 30, RAYWHITE);
+        }
+        
+        if (d_isHandVisible) {
+            d_renderer.drawHands(d_players[d_currentPlayerIndex]);
+        }
+
+        if (d_isShopOpen) {
+            d_shopMenu.updateLayout(GetScreenWidth(), GetScreenHeight(), d_shop.getCards().size());
+        }
+        d_renderer.drawShop(d_shop, d_shopMenu, d_isShopOpen);
+
+        d_shopButton.update(GetMouseX(), GetMouseY(), false); 
+        d_shopButton.draw();
+
+        d_toggleHandButton.update(GetMouseX(), GetMouseY(), false); 
+        d_toggleHandButton.draw();
+
+        
+        if (d_isTargeting) {
             DrawRectangle(0, 0, GetScreenWidth(), 40, Fade(BLACK, 0.8f));
             DrawText("MODE CIBLAGE : Cliquez sur une case du plateau (Clic droit pour annuler)", 150, 10, 20, YELLOW);
-            }
-            
-        EndDrawing();
-    }
-}
-std::unique_ptr<Card> GameEngine::generateRandomCard() {
-    int roll = GetRandomValue(0, 5); 
-    
-    switch (roll) {
-        case 0: return std::make_unique<MeteoriteCard>();
-        case 1: return std::make_unique<TimeCard>();
-        case 2: return std::make_unique<BlockCard>();
-        case 3: return std::make_unique<PawnSprintCard>();
-        case 4: return std::make_unique<FreezeCard>();
-        case 5: return std::make_unique<FogCard>();
-        default: return std::make_unique<MeteoriteCard>(); 
-    }
-}
-
-
-void GameEngine::fillPlayerHand(Player& player) {
-    while (player.getHand().size() < 3) {
-        player.drawCard(generateRandomCard());
-    }
+        }
+        
+    EndDrawing();
 }
 
 void GameEngine::endPlayerTurn() {

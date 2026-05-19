@@ -20,10 +20,11 @@ void CardRenderer::updateCardDimensions(int boardWidth) {
 
 Color CardRenderer::getRarityColor(CardRarity rarity) const {
     switch (rarity) {
-        case CardRarity::Common:    return GRAY;
-        case CardRarity::Rare:      return BLUE;
-        case CardRarity::Epic:      return PURPLE;
-        case CardRarity::Legendary: return GOLD;
+        // Des couleurs "flashy" et chaotiques faites sur mesure !
+        case CardRarity::Common:    return { 170, 180, 180, 255 }; 
+        case CardRarity::Rare:      return { 50, 180, 255, 255 }; 
+        case CardRarity::Epic:      return { 220, 50, 255, 255 };  
+        case CardRarity::Legendary: return { 255, 190, 20, 255 };  
         default:                    return WHITE;
     }
 }
@@ -45,7 +46,7 @@ void CardRenderer::drawCard(const Card& card, int x, int y, bool isHovered) cons
     DrawText("Chaos Effect", x + 15, drawY + 110, 10, LIGHTGRAY);
 }
 
-void CardRenderer::drawHands(const std::vector<Player>& players, int mouseX, int mouseY) const {
+void CardRenderer::drawHands(const Player& currentPlayer, int mouseX, int mouseY) const {
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
@@ -77,17 +78,35 @@ void CardRenderer::drawHands(const std::vector<Player>& players, int mouseX, int
             }
         }
     }
-
-    
     if (hoveredCard != nullptr) {
-
-        DrawRectangle(tooltipX + 15, tooltipY + 15, 200, 60, Fade(BLACK, 0.9f));
-        DrawRectangleLines(tooltipX + 15, tooltipY + 15, 200, 60, GOLD);
+        Color rarityColor = getRarityColor(hoveredCard->getRarity());
+        Rectangle tooltipRect = { (float)tooltipX + 15, (float)tooltipY + 15, 200, 70 };
         
-        // Nom de la carte
-        DrawText(hoveredCard->getName().c_str(), tooltipX + 25, tooltipY + 20, 15, GOLD);
+        DrawRectangleRounded(tooltipRect, 0.1f, 10, Fade(BLACK, 0.9f));
+        DrawRectangleRoundedLines(tooltipRect, 0.1f, 10, rarityColor);
+        DrawText(hoveredCard->getName().c_str(), tooltipX + 25, tooltipY + 25, 15, rarityColor);
+        DrawText(hoveredCard->getDescription().c_str(), tooltipX + 25, tooltipY + 50, 10, WHITE);
+    }
+}
 
-        DrawText(hoveredCard->getDescription().c_str(), tooltipX + 25, tooltipY + 45, 10, WHITE);
+void CardRenderer::drawGradientBackground(int x, int y, Color rarityColor) const {
+    // Crée un dégradé du noir (en bas) vers la couleur de rareté (en haut)
+    Color darkColor = { (unsigned char)(rarityColor.r / 3), (unsigned char)(rarityColor.g / 3), (unsigned char)(rarityColor.b / 3), 255 };
+    
+    // Diviser en 10 bandes horizontales pour un dégradé smooth
+    int bandHeight = CARD_HEIGHT / 10;
+    for (int i = 0; i < 10; ++i) {
+        // Interpoler la couleur entre darkColor et rarityColor
+        float t = (float)i / 10.0f;
+        Color bandColor = {
+            (unsigned char)(darkColor.r + (rarityColor.r - darkColor.r) * t),
+            (unsigned char)(darkColor.g + (rarityColor.g - darkColor.g) * t),
+            (unsigned char)(darkColor.b + (rarityColor.b - darkColor.b) * t),
+            255
+        };
+        
+        Rectangle band = { (float)x, (float)(y + i * bandHeight), (float)CARD_WIDTH, (float)bandHeight };
+        DrawRectangleRounded(band, 0.15f, 10, bandColor);
     }
 }
 int CardRenderer::getClickedCardIndex(int playerIndex, int numCards, int mouseX, int mouseY) const {

@@ -68,10 +68,11 @@ public:
     EventRarity getRarity() const override {
         return EventRarity::Rare; 
     }
+    EventRarity getRarity() const override { return EventRarity::Rare; }
 
 private:
     const AudioManager& d_audio;
-    Position d_target = {-1, -1};
+    Position d_target = Position::NONE;
     bool d_isActive = false;
     
     int d_stepsRemaining = 0; 

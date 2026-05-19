@@ -16,9 +16,7 @@ enum class PieceType{
     Rook,
     King,
     Queen,
-    Idiot,
-    PionDebile,
-    Duck
+    Chameleon //Special
 };
 
 class Piece{

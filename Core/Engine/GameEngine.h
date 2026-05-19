@@ -13,6 +13,9 @@
 #include "../Core/Pieces/Bishop.h"
 #include "../Core/Pieces/Queen.h"
 #include "../Core/Pieces/King.h"
+#include "../Graphics/UI/Settings.h"
+#include "../Graphics/UI/SettingsScreen.h"
+#include "../Graphics/UI/TitleScreen.h"
 
 #include "../Core/CardsList/MeteoriteCard.h"
 #include "../Core/CardsList/TimeCard.h"
@@ -20,8 +23,22 @@
 #include "../Core/CardsList/PawnSprintCard.h"
 #include "../Core/CardsList/FreezeCard.h"
 #include "../Core/CardsList/FogCard.h"
+#include "../Core/CardsList/HideTimeCard.h"
+#include "../Core/CardsList/LavaWallCard.h"
+#include "../Core/CardsList/TeleportCard.h"
+#include "../Core/CardsList/MysteryCard.h"
+
+#include "SpecialMoveHandler.h"
+#include "MoveValidator.h"
+#include "PromotionHandler.h"
+#include "BoardInteractionManager.h"
+#include "../Core/Engine/Shop.h"
+
+#include "../Graphics/UI/SettingsScreen.h"
 
 enum class GameState {
+    TitleScreen,
+    Settings,
     Playing,
     WhiteWins,
     BlackWins,
@@ -30,17 +47,21 @@ enum class GameState {
 
 class GameEngine {
 public:
-    GameEngine(int cellSize = Renderer::CELL_SIZE);
+    GameEngine(int cellSize = Config::Graphics::CELL_SIZE);
     void run();
     
 
 private:
 
-    GameState d_gameState = GameState::Playing;
+    GameState d_gameState = GameState::TitleScreen;
+    bool d_shouldQuit = false;
+    Settings d_settings;
+    SettingsScreen d_settingsScreen;
+    TitleScreen d_titleScreen;
     Board d_board;
     Renderer d_renderer;
     bool d_isPromoting = false;
-    Position d_promotionPos = {-1, -1};
+    Position d_promotionPos = Position::NONE;
 
    // PieceColor d_currentTurn;
     Position d_selectedTile;
@@ -70,22 +91,27 @@ private:
 
     void initBoard();
     void handleInput(Position clickedPos);
-    void handleCastling(Position startPos, Position targetPos);
+    int getFlippedBoardY(int boardY) const;
 
-    void handleEnPassant(Position startPos, Position targetPos);
-    void updateEnPassantTarget(Position startPos, Position targetPos);
-
-    bool checkPromotion(Position targetPos);
-    void handlePromotion(int mouseX, int mouseY);
-
-    std::vector<Position> filterLegalMoves(Position startPos, const std::vector<Position>& pseudoMoves);
     void updateGameState();
+    void updateSystems();
+    void processInput();
+    void renderFrame();
+    void updateBoardLayout();
 
     void fillPlayerHand(Player& player);
     std::unique_ptr<Card> generateRandomCard();
-    
-    void endPlayerTurn(); // Gère la fin du tour et le mouvement du canard
-    void moveDuckTurn(); // Fait jouer le canard
-    void applySlipperyTerrain(Position startPos, Position& finalPos); // Applique la glissade dans la direction du mouvement
+
+    const char* getPlayerTimeString(int playerIndex);
+
+    Position d_firstTarget = Position::NONE;
+    Shop d_shop;
+    ShopMenu d_shopMenu;
+    bool d_isShopOpen = false;
+    Button d_shopButton{ 10, 10, "BOUTIQUE" };
+    bool d_isHandVisible = true;
+    Button d_toggleHandButton{ 140, 10, "CARTES (ON/OFF)" };
+
+
 
 };

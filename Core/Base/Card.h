@@ -25,6 +25,13 @@ public:
     virtual CardRarity getRarity() const = 0;
     virtual int getCost() const = 0; 
     virtual bool requiresTarget() const { return false; }
+    virtual bool isValidTarget(Board& board, Position target) const { return true; }
 
-    virtual void play(Player& player, Board& board, EventManager& eventManager, Position target = {-1, -1}) = 0;
+    virtual void play(Player& player, Board& board, EventManager& eventManager, Position target = Position::NONE) = 0;
+
+    virtual bool requiresTwoTargets() const { return false; } 
+    
+    virtual bool isValidSecondTarget(Board& board, Position firstTarget, Position secondTarget) const { return false; }
+    
+    virtual void playTwoTargets(Player& player, Board& board, EventManager& eventManager, Position firstTarget, Position secondTarget) {}
 };

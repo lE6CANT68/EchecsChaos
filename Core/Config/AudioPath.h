@@ -7,4 +7,5 @@ namespace Audiopath{
     constexpr const char* SOUND_VICTORY = "../assets/sounds/Victory.mp3";
     constexpr const char* SOUND_GAME_OVER = "../assets/sounds/GameOver.wav";
     constexpr const char* SOUND_STALEMATE = "../assets/sounds/Stalemate.wav";
+    constexpr const char* SOUND_BUTTON_PRESS = "../assets/sounds/Button_press.wav";
 }

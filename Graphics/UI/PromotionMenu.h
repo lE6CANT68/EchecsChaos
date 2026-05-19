@@ -1,7 +1,8 @@
 #pragma once
 #include <vector>
 #include <optional>
-#include "../Base/Piece.h" // Ajuste le chemin vers ton enum PieceType
+#include "../Base/Piece.h" 
+#include "../Core/Config/Constant.h"
 
 class PromotionMenu {
 public:
@@ -12,6 +13,7 @@ public:
     int getBoxSize() const ;
     int getStartX() const ;
     int getStartY() const ;
+    void updateLayout(int boardStartX, int boardWidth);
 
 private:
     std::vector<PieceType> d_options;

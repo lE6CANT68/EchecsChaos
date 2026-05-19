@@ -18,6 +18,10 @@
 
 #include "../Core/Event/EventList/SlipperyTerrainEvent.h"
 #include "../Core/Event/EventList/ExpandBoardEvent.h"
+#include "../Core/Event/EventList/HideTimeEvent.h"
+#include "../Core/Event/EventList/ChameleonEvent.h"
+#include "../Core/Event/EventList/LavaWallEvent.h"
+
 
 class EventManager {
 public:
@@ -39,14 +43,21 @@ public:
 
     const AudioManager& getAudio() const { return d_audio; }
 
+    bool hasGlobalEffect(GlobalEffect effect) const;
+
+    std::unique_ptr<Event> generateRandomEvent(EventRarity rarity);
+
 private:
     float d_messageTimer = 0.0f;
-    std::string d_currentMessage = "";
+    std::vector<Position> generateRandomWall();
+    float d_messageTimer;
+    const char* d_currentMessage;
+
     std::vector<std::unique_ptr<Event>> d_activeEvents;
 
     std::vector<std::function<std::unique_ptr<Event>()>> d_eventGenerators;
 
-    int d_eventProbability = 100; 
+    int d_eventProbability = 5; 
 
     const AudioManager& d_audio;
     bool d_boardHasExpanded = false; // Track si l'événement d'expansion s'est produit 

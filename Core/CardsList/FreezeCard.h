@@ -13,7 +13,6 @@ public:
     bool requiresTarget() const override { return true; }
 
     void play(Player& player, Board& board, EventManager& eventManager, Position target) override {
-        // On s'assure juste que le clic est valide avant de créer l'événement
         if (board.isinBounds(target)) {
             Tile& tile = board.getTile(target);
             if (tile.hasPiece() && tile.getPiece()->getType() != PieceType::King) {

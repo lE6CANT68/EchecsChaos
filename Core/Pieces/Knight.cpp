@@ -19,7 +19,7 @@ std::vector<Position> Knight::getValidMoves(Position currentPos, const Board& bo
             
             const Tile& tile = board.getTile(targetPos);
             if (!tile.isWalkable()) {
-                break; 
+                continue; 
             }
             if (!tile.hasPiece() || tile.getPiece()->getColor() != this->getColor()) {
                 moves.push_back(targetPos);
