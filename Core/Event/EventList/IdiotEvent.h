@@ -33,7 +33,8 @@ public:
         for (int y = ligneMilieuHaut; y <= ligneMilieuBas; ++y) {
             for (int x = 0; x < board.getWidth(); ++x) {
                 Position pos = {x, y};
-                if (!board.getTile(pos).hasPiece()) {
+                // Ne pas spawner sur les portails
+                if (!board.getTile(pos).hasPiece() && !board.isPortal(pos)) {
                     emptyPositions.push_back(pos);
                 }
             }

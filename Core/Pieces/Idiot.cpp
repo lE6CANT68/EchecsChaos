@@ -24,7 +24,12 @@ std::vector<Position> Idiot::getValidMoves(Position currentPos, const Board& boa
                 continue; 
             }
             
-            if (!tile.hasPiece() || (tile.getPiece()->getColor() != this->getColor() && tile.getPiece()->getType() != PieceType::King)) {
+            // L'Idiot peut capturer :
+            // - Des pièces de couleur différente (sauf King)
+            // - Le Duck même s'il est Neutral (pour la capture mutuelle)
+            if (!tile.hasPiece() || 
+                (tile.getPiece()->getColor() != this->getColor() && tile.getPiece()->getType() != PieceType::King) ||
+                (this->getColor() == PieceColor::Neutral && tile.getPiece()->getType() == PieceType::Duck)) {
                 moves.push_back(targetPos);
             }
         }

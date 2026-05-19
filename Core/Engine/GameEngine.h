@@ -66,6 +66,7 @@ private:
 
     std::vector<Player> d_players;
     int d_currentPlayerIndex;
+    int d_turnCount = 0; // Compte les tours pour savoir quand faire jouer le canard
 
     void initBoard();
     void handleInput(Position clickedPos);
@@ -82,7 +83,9 @@ private:
 
     void fillPlayerHand(Player& player);
     std::unique_ptr<Card> generateRandomCard();
-
-
+    
+    void endPlayerTurn(); // Gère la fin du tour et le mouvement du canard
+    void moveDuckTurn(); // Fait jouer le canard
+    void applySlipperyTerrain(Position startPos, Position& finalPos); // Applique la glissade dans la direction du mouvement
 
 };

@@ -12,6 +12,12 @@
 #include "../Core/Event/EventList/ObstacleEvent.h"
 #include "../Core/Event/EventList/FogEvent.h"
 #include "../Core/Event/EventList/IdiotEvent.h"
+#include "../Core/Event/EventList/DuckEvent.h"
+#include "../Core/Event/EventList/PionDebileEvent.h"
+#include "../Core/Event/EventList/PortalEvent.h"
+
+#include "../Core/Event/EventList/SlipperyTerrainEvent.h"
+#include "../Core/Event/EventList/ExpandBoardEvent.h"
 
 class EventManager {
 public:
@@ -42,5 +48,6 @@ private:
 
     int d_eventProbability = 100; 
 
-    const AudioManager& d_audio; 
+    const AudioManager& d_audio;
+    bool d_boardHasExpanded = false; // Track si l'événement d'expansion s'est produit 
 };

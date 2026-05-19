@@ -11,6 +11,18 @@ EventManager::EventManager(const AudioManager& audio)
    d_eventGenerators.push_back([this]() {
         return std::make_unique<IdiotEvent>(this->d_audio);
    });
+   d_eventGenerators.push_back([this]() {
+        return std::make_unique<DuckEvent>(this->d_audio);
+   });
+   d_eventGenerators.push_back([this]() {
+        return std::make_unique<PortalEvent>(this->d_audio);
+   });
+   d_eventGenerators.push_back([this]() {
+        return std::make_unique<ExpandBoardEvent>(this->d_audio);
+   });
+   d_eventGenerators.push_back([this]() {
+        return std::make_unique<SlipperyTerrainEvent>(this->d_audio);
+   });
     //d_eventGenerators.push_back([this]() {
     //    return std::make_unique<FreezeEvent>(Position{-1, -1}, 3, this->d_audio);
     //});
@@ -55,6 +67,14 @@ void EventManager::triggerRandomEvent(Board& board) {
     addEvent(board, std::move(newEvent));
 }
 void EventManager::addEvent(Board& board, std::unique_ptr<Event> newEvent) {
+    // Vérifier si c'est l'événement d'expansion et qu'il ne s'est pas déjà produit
+    if (auto expandEvent = dynamic_cast<ExpandBoardEvent*>(newEvent.get())) {
+        if (d_boardHasExpanded) {
+            return; // Ignorer si déjà étendu
+        }
+        d_boardHasExpanded = true; // Marquer comme étendu
+    }
+
     newEvent->start(board); 
     
     d_currentMessage = newEvent->getMessage();

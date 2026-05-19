@@ -13,6 +13,9 @@
 #include "Pieces/KingDrawer.h"
 #include "Pieces/QueenDrawer.h"
 #include "Pieces/IdiotDrawer.h"
+#include "Pieces/PionDebileDrawer.h"
+#include "Pieces/DuckDrawer.h"
+#include "PortalDrawer.h"
 #include "../Graphics/UI/PromotionMenu.h"
 #include "../Graphics/VisualEffect.h"
 
@@ -34,9 +37,14 @@ public:
     void drawChrono(const char* whiteTime, const char* blackTime, PieceColor currentTurn, int offsetX, int offsetY);
     void drawEffects(const std::vector<VisualEffect>& effects);
     void drawHands(const std::vector<Player>& players) const ;
-    
+    void updateDimensionsForBoard(const Board& board);
 
     int getClickedCardIndex(int playerIndex, int numCards, int mouseX, int mouseY) const;
+    
+    // Accesseurs pour les dimensions
+    float getCellSize() const { return d_cellSize; }
+    int getOffsetX() const { return d_offsetX; }
+    int getOffsetY() const { return d_offsetY; }
 
 
 
@@ -44,15 +52,19 @@ private:
     float d_cellSize;
     int d_offsetX;
     int d_offsetY;
+    int d_lastBoardWidth = 8; // Pour détecter les changements de taille
+    bool d_initializedDimensions = false; // Initialisation faite une fois
 
     std::map<PieceType, std::unique_ptr<PieceDrawer>> d_drawers;
 
 
     void drawBoard(const Board& board);
+    void drawBoardBorder(const Board& board);
     void drawPieces(const Board& board);
     void drawTileHighlights(Position selectedPos, Position kingInCheckPos);
     void drawMoveHints(const Board& board, const std::vector<Position>& validMoves);
     void drawTileDecoration(TileType type, float posX, float posY) const;
+    void drawPortals(const Board& board);
     void drawFogLayer(const Board& board, Position selectedTile, const std::vector<Position>& currentValidMoves, PieceColor currentColor);
     
     

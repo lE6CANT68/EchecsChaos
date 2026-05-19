@@ -2,6 +2,22 @@
 
 CardRenderer::CardRenderer() {}
 
+void CardRenderer::updateCardDimensions(int boardWidth) {
+    if (boardWidth == 10) {
+        // Plateau agrandi : cartes plus petites
+        d_cardWidth = 70;
+        d_cardHeight = 90;
+        d_cardSpacing = 10;
+        d_hoverLift = 8;
+    } else {
+        // Plateau normal (8x8)
+        d_cardWidth = 100;
+        d_cardHeight = 130;
+        d_cardSpacing = 15;
+        d_hoverLift = 10;
+    }
+}
+
 Color CardRenderer::getRarityColor(CardRarity rarity) const {
     switch (rarity) {
         case CardRarity::Common:    return GRAY;
@@ -13,19 +29,19 @@ Color CardRenderer::getRarityColor(CardRarity rarity) const {
 }
 
 void CardRenderer::drawCard(const Card& card, int x, int y, bool isHovered) const {
-    int drawY = isHovered ? y - HOVER_LIFT : y;
+    int drawY = isHovered ? y - d_hoverLift : y;
     Color rarityColor = getRarityColor(card.getRarity());
     
-    DrawRectangle(x, drawY, CARD_WIDTH, CARD_HEIGHT, DARKGRAY);
-    DrawRectangleLinesEx({(float)x, (float)drawY, (float)CARD_WIDTH, (float)CARD_HEIGHT}, 3, rarityColor);
+    DrawRectangle(x, drawY, d_cardWidth, d_cardHeight, DARKGRAY);
+    DrawRectangleLinesEx({(float)x, (float)drawY, (float)d_cardWidth, (float)d_cardHeight}, 3, rarityColor);
 
-    DrawRectangle(x + 5, drawY + 5, CARD_WIDTH - 10, 25, rarityColor);
+    DrawRectangle(x + 5, drawY + 5, d_cardWidth - 10, 25, rarityColor);
     DrawText(card.getName().c_str(), x + 10, drawY + 12, 10, WHITE);
 
-    DrawCircle(x + CARD_WIDTH - 12, drawY + 12, 10, GOLD);
-    DrawText(TextFormat("%d", card.getCost()), x + CARD_WIDTH - 16, drawY + 7, 12, BLACK);
+    DrawCircle(x + d_cardWidth - 12, drawY + 12, 10, GOLD);
+    DrawText(TextFormat("%d", card.getCost()), x + d_cardWidth - 16, drawY + 7, 12, BLACK);
 
-    DrawRectangle(x + 10, drawY + 40, CARD_WIDTH - 20, 60, BLACK);
+    DrawRectangle(x + 10, drawY + 40, d_cardWidth - 20, 60, BLACK);
     DrawText("Chaos Effect", x + 15, drawY + 110, 10, LIGHTGRAY);
 }
 
@@ -42,14 +58,14 @@ void CardRenderer::drawHands(const std::vector<Player>& players, int mouseX, int
         int n = hand.size();
         if (n == 0) continue;
         
-        int totalWidth = (n * CARD_WIDTH) + ((n - 1) * CARD_SPACING);
+        int totalWidth = (n * d_cardWidth) + ((n - 1) * d_cardSpacing);
         int startX = (screenWidth - totalWidth) / 2;
-        int baseY = (p == 0) ? (screenHeight - CARD_HEIGHT - 20) : 20;
+        int baseY = (p == 0) ? (screenHeight - d_cardHeight - 20) : 20;
 
         for (int i = 0; i < n; ++i) {
-            int cardX = startX + i * (CARD_WIDTH + CARD_SPACING);
-            bool isHovered = (mouseX >= cardX && mouseX <= cardX + CARD_WIDTH &&
-                              mouseY >= baseY && mouseY <= baseY + CARD_HEIGHT);
+            int cardX = startX + i * (d_cardWidth + d_cardSpacing);
+            bool isHovered = (mouseX >= cardX && mouseX <= cardX + d_cardWidth &&
+                              mouseY >= baseY && mouseY <= baseY + d_cardHeight);
 
             drawCard(*hand[i], cardX, baseY, isHovered);
 
@@ -75,22 +91,21 @@ void CardRenderer::drawHands(const std::vector<Player>& players, int mouseX, int
     }
 }
 int CardRenderer::getClickedCardIndex(int playerIndex, int numCards, int mouseX, int mouseY) const {
-
     if (numCards == 0) return -1; 
 
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
 
-    int totalWidth = (numCards * CARD_WIDTH) + ((numCards - 1) * CARD_SPACING);
+    int totalWidth = (numCards * d_cardWidth) + ((numCards - 1) * d_cardSpacing);
     int startX = (screenWidth - totalWidth) / 2;
 
     
-    int baseY = (playerIndex == 0) ? (screenHeight - CARD_HEIGHT - 20) : 20;
+    int baseY = (playerIndex == 0) ? (screenHeight - d_cardHeight - 20) : 20;
 
     for (int i = 0; i < numCards; ++i) {
-        int cardX = startX + i * (CARD_WIDTH + CARD_SPACING);
-        if (mouseX >= cardX && mouseX <= cardX + CARD_WIDTH &&
-            mouseY >= baseY && mouseY <= baseY + CARD_HEIGHT) {
+        int cardX = startX + i * (d_cardWidth + d_cardSpacing);
+        if (mouseX >= cardX && mouseX <= cardX + d_cardWidth &&
+            mouseY >= baseY && mouseY <= baseY + d_cardHeight) {
             
             return i; 
         }
