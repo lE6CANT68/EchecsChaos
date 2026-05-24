@@ -19,13 +19,11 @@ void Renderer::updateDimensionsForBoard(const Board& board) {
     
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
-    
-    // Initialiser les dimensions une seule fois (dès que Raylib est prêt)
     if (!d_initializedDimensions && screenWidth > 0 && screenHeight > 0) {
         d_initializedDimensions = true;
         d_lastBoardWidth = currentWidth;
         
-        int availableHeight = screenHeight - 250; // Moins d'espace réservé
+        int availableHeight = screenHeight - 250;
         int availableWidth = screenWidth - 80;
         
         float maxCellSize = std::min(
@@ -35,29 +33,19 @@ void Renderer::updateDimensionsForBoard(const Board& board) {
         
         d_cellSize = maxCellSize;
         d_offsetX = (screenWidth - (currentWidth * d_cellSize)) / 2.0f;
-        d_offsetY = (screenHeight - (currentHeight * d_cellSize)) / 2.0f; // Centrage parfait
+        d_offsetY = (screenHeight - (currentHeight * d_cellSize)) / 2.0f; 
     }
-    
-    // Si la taille du board a changé, recalculer les dimensions
     if (currentWidth != d_lastBoardWidth && screenWidth > 0 && screenHeight > 0) {
         d_lastBoardWidth = currentWidth;
-        
-        // Réserver de l'espace pour les cartes
-        int availableHeight = screenHeight - 250; // Espace pour cartes haut/bas
-        int availableWidth = screenWidth - 80;    // marges latérales
-        
-        // Calculer la taille maximale d'une cellule pour remplir l'espace
+        int availableHeight = screenHeight - 250; 
+        int availableWidth = screenWidth - 80;    
         float maxCellSize = std::min(
             availableWidth / (float)currentWidth,
             availableHeight / (float)currentHeight
         );
-        
-        // Définir la taille de cellule et les offsets pour centrer le plateau
         d_cellSize = maxCellSize;
         d_offsetX = (screenWidth - (currentWidth * d_cellSize)) / 2.0f;
-        d_offsetY = (screenHeight - (currentHeight * d_cellSize)) / 2.0f; // Centrage parfait
-        
-        // Redimensionner les cartes aussi
+        d_offsetY = (screenHeight - (currentHeight * d_cellSize)) / 2.0f; 
         if (currentWidth == 10) {
             d_cardRenderer.updateCardDimensions(10);
         } else {
@@ -66,7 +54,7 @@ void Renderer::updateDimensionsForBoard(const Board& board) {
     }
 }
 
-void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,int whiteScore, int blackScore,Position kingInCheckPos) {
+void Renderer::draw(const Board& board, Position selectedPos, const std::vector<Position>& validMoves,PieceColor currentColor,int bottomScore, int topScore,Position kingInCheckPos) {
     updateDimensionsForBoard(board);
     drawBoard(board, currentColor);
     drawBoardBorder(board);
@@ -75,7 +63,29 @@ void Renderer::draw(const Board& board, Position selectedPos, const std::vector<
     drawPieces(board, currentColor);
     drawMoveHints(board, validMoves, currentColor);   
     drawFogLayer(board, selectedPos, validMoves, currentColor);
-    drawScore(whiteScore, blackScore);
+    int scoreWidth = 140;
+    int scoreHeight = 30;
+    int scorePosX = GetScreenWidth() - 170;
+    int scoreTopY = 20;
+    int scoreBottomY = GetScreenHeight() - 50;
+
+    if (currentColor == PieceColor::White) {
+        DrawRectangle(scorePosX, scoreTopY, scoreWidth, scoreHeight, BLACK);
+        DrawRectangleLines(scorePosX, scoreTopY, scoreWidth, scoreHeight, GRAY);
+        DrawText(TextFormat("Noir : %d", topScore), scorePosX + 10, scoreTopY + 5, 20, WHITE);
+
+        DrawRectangle(scorePosX, scoreBottomY, scoreWidth, scoreHeight, RAYWHITE);
+        DrawRectangleLines(scorePosX, scoreBottomY, scoreWidth, scoreHeight, GOLD);
+        DrawText(TextFormat("Blanc : %d", bottomScore), scorePosX + 10, scoreBottomY + 5, 20, BLACK);
+    } else {
+        DrawRectangle(scorePosX, scoreTopY, scoreWidth, scoreHeight, RAYWHITE);
+        DrawRectangleLines(scorePosX, scoreTopY, scoreWidth, scoreHeight, DARKGRAY);
+        DrawText(TextFormat("Blanc : %d", topScore), scorePosX + 10, scoreTopY + 5, 20, BLACK);
+
+        DrawRectangle(scorePosX, scoreBottomY, scoreWidth, scoreHeight, BLACK);
+        DrawRectangleLines(scorePosX, scoreBottomY, scoreWidth, scoreHeight, GOLD);
+        DrawText(TextFormat("Noir : %d", bottomScore), scorePosX + 10, scoreBottomY + 5, 20, WHITE);
+    }
 }
 void Renderer::drawBoard(const Board& board, PieceColor currentColor) {
     for (int x = 0; x < board.getWidth(); ++x) {
@@ -96,13 +106,10 @@ void Renderer::drawBoard(const Board& board, PieceColor currentColor) {
 }
 
 void Renderer::drawBoardBorder(const Board& board) {
-    // Calculer les coordonnées de la bordure
     float startX = d_offsetX;
     float startY = d_offsetY;
     float endX = d_offsetX + (board.getWidth() * d_cellSize);
     float endY = d_offsetY + (board.getHeight() * d_cellSize);
-    
-    // Dessiner les 4 côtés de la bordure avec une ligne épaisse
     float borderThickness = 4.0f;
     
     // Haut
@@ -224,35 +231,32 @@ void Renderer::drawPromotionMenu(PieceColor color, const PromotionMenu& menu) co
         d_drawers.at(options[i])->draw(xPos, yPos, pieceColor, boxSize);
     }
 }
-void Renderer::drawChrono(const char* whiteTime, const char* blackTime, PieceColor currentTurn, int offsetX, int offsetY) {
+void Renderer::drawChrono(const char* bottomTime, const char* topTime, PieceColor currentTurn, int offsetX, int offsetY) {
     int width = 120;
     int height = 60;
     int fontSize = 30;
     int posX = offsetX + (8 * d_cellSize) + 20;
 
-  
-    int blackY = offsetY; 
+    int topY = offsetY; 
+    int bottomY = offsetY + (8 * d_cellSize) - height;
 
-    DrawRectangle(posX, blackY, width, height, BLACK);
-    if (currentTurn == PieceColor::Black) {
-        DrawRectangleLinesEx({(float)posX, (float)blackY, (float)width, (float)height}, 3, GOLD);
-    } else {
-        DrawRectangleLinesEx({(float)posX, (float)blackY, (float)width, (float)height}, 1, GRAY);
-    }
-    DrawText(blackTime, posX + 20, blackY + 15, fontSize, WHITE);
-
-
-   
-    int whiteY = offsetY + (8 * d_cellSize) - height;
-
-    DrawRectangle(posX, whiteY, width, height, RAYWHITE);
     if (currentTurn == PieceColor::White) {
-        DrawRectangleLinesEx({(float)posX, (float)whiteY, (float)width, (float)height}, 3, GOLD);
+        DrawRectangle(posX, topY, width, height, BLACK);
+        DrawRectangleLinesEx({(float)posX, (float)topY, (float)width, (float)height}, 1, GRAY);
+        DrawText(topTime, posX + 20, topY + 15, fontSize, WHITE);
+
+        DrawRectangle(posX, bottomY, width, height, RAYWHITE);
+        DrawRectangleLinesEx({(float)posX, (float)bottomY, (float)width, (float)height}, 3, GOLD);
+        DrawText(bottomTime, posX + 20, bottomY + 15, fontSize, BLACK);
     } else {
-        DrawRectangleLinesEx({(float)posX, (float)whiteY, (float)width, (float)height}, 1, DARKGRAY);
+        DrawRectangle(posX, topY, width, height, RAYWHITE);
+        DrawRectangleLinesEx({(float)posX, (float)topY, (float)width, (float)height}, 1, DARKGRAY);
+        DrawText(topTime, posX + 20, topY + 15, fontSize, BLACK);
+
+        DrawRectangle(posX, bottomY, width, height, BLACK);
+        DrawRectangleLinesEx({(float)posX, (float)bottomY, (float)width, (float)height}, 3, GOLD);
+        DrawText(bottomTime, posX + 20, bottomY + 15, fontSize, WHITE);
     }
-    
-    DrawText(whiteTime, posX + 20, whiteY + 15, fontSize, BLACK);
 }
 
 
@@ -327,14 +331,10 @@ void Renderer::drawFogLayer(const Board& board, Position selectedTile, const std
     }
 }
 void Renderer::drawScore(int whiteScore, int blackScore) {
-    DrawText(TextFormat("Score: %d", whiteScore), GetScreenWidth() - 160, GetScreenHeight() - 40, 20, GOLD);
-    DrawText(TextFormat("Score: %d", blackScore), GetScreenWidth() - 160, 20, 20, GOLD);
 }
 void Renderer::drawShop(const Shop& shop, const ShopMenu& menu, bool isShopOpen) {
     if (isShopOpen) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), { 0, 0, 0, 180 });
-        
-        // On récupère les infos du menu
         Rectangle panel = { (float)menu.getPanelX(), (float)menu.getPanelY(), (float)menu.getPanelWidth(), (float)menu.getPanelHeight() };
         DrawRectangleRec(panel, RAYWHITE);
         DrawRectangleLinesEx(panel, 4, GOLD);
@@ -344,11 +344,8 @@ void Renderer::drawShop(const Shop& shop, const ShopMenu& menu, bool isShopOpen)
 
         const auto& cards = shop.getCards();
         for (size_t i = 0; i < cards.size(); ++i) {
-            // Calcul de la position X pour cette carte précise
             int cardX = menu.getStartX() + i * (menu.getCardWidth() + menu.getSpacing());
             int cardY = menu.getStartY();
-            
-            // Dessine la carte ici (via d_cardRenderer)
             d_cardRenderer.drawCard(*cards[i], cardX, cardY, false);
             
             int price = Shop::getPrice(cards[i]->getRarity());

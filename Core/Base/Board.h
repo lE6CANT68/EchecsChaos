@@ -2,6 +2,7 @@
 
 #include <vector>
 #include "Tile.h"
+#include <sstream>
 
 class Board{
     const static int BASE_WIDTH = 8;
@@ -41,7 +42,9 @@ class Board{
         void decrementSlipperyTurns();
         int getSlipperyTurnsRemaining() const { return d_slipperyTurnsRemaining; }
         bool isSlipperyTerrainActive() const { return d_isSlipperyTerrainActive; }
-
+        std::string toString(PieceColor activeColor = PieceColor::White) const;
+        std::string getChaosStateString() const;
+        void loadFromString(const std::string& fen);
     private:
         std::vector<std::vector<Tile>> d_grid;
         int d_width;

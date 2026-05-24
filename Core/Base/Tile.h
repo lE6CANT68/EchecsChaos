@@ -12,7 +12,6 @@ enum class TileType {
 
 class Tile {
     public:
-        // Ajout de d_isSlippery{false} dans l'initialisation
         Tile() : d_type(TileType::Normal), d_isFoggy{false}, d_isSlippery{false} {}
 
         TileType getType() const { return d_type; }
@@ -31,7 +30,6 @@ class Tile {
         bool isFoggy() const { return d_isFoggy; }
         void setFoggy(bool fog) { d_isFoggy = fog; }
         
-        // --- NOUVELLES MÉTHODES POUR LA GLISSADE ---
         bool isSlippery() const { return d_isSlippery; }
         void setSlippery(bool slippery) { d_isSlippery = slippery; }
 

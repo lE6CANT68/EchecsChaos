@@ -7,3 +7,5 @@ out/
 *.exe
 *.dll
 *.lib
+
+.env

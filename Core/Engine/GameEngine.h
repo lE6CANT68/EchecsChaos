@@ -2,6 +2,7 @@
 #include "../Core/Base/Board.h"
 #include "../Graphics/Renderer.h"
 #include "../Graphics/UI/PromotionMenu.h"
+#include <future>
 #include "raylib.h"
 #include "../Core/Audio/AudioManager.h"
 #include "../Core/Time/Chrono.h"
@@ -40,9 +41,12 @@ enum class GameState {
     TitleScreen,
     Settings,
     Playing,
+    WAITING_FOR_AI,
     WhiteWins,
     BlackWins,
-    Stalemate 
+    Stalemate,
+    WAITING_FOR_ANALYSIS,
+    SHOW_ANALYSIS
 };
 
 class GameEngine {
@@ -57,6 +61,7 @@ private:
     bool d_shouldQuit = false;
     Settings d_settings;
     SettingsScreen d_settingsScreen;
+    std::future<std::string> d_aiResponseFuture;
     TitleScreen d_titleScreen;
     Board d_board;
     Renderer d_renderer;
@@ -117,7 +122,26 @@ private:
     bool d_isShopOpen = false;
     Button d_shopButton{ 10, 10, "BOUTIQUE" };
     bool d_isHandVisible = true;
-    Button d_toggleHandButton{ 140, 10, "CARTES (ON/OFF)" };
+    Button d_toggleHandButton{ 150, 10, "CARTES (ON/OFF)" };
+    Button d_aiButton{ 380, 10, "IA" };
+    bool d_isAIPromptOpen = false;
+    std::string d_aiPromptText = "";
+
+    std::vector<std::string> d_boardHistory;
+    std::future<std::string> d_aiAnalysisFuture;
+    Button d_analyzeButton{ 300, 500, "ANALYSER LA PARTIE" };
+    
+    struct AnalysisMove {
+        int turn;
+        std::string fen;
+        std::string comment;
+    };
+    std::vector<AnalysisMove> d_analysisMoves;
+    int d_currentAnalysisIndex = 0;
+    Button d_nextAnalysisButton{ 600, 700, "SUIVANT" };
+    Button d_prevAnalysisButton{ 100, 700, "PRECEDENT" };
+    Button d_closeAnalysisButton{ 350, 700, "FERMER" };
+    Board d_analysisBoard;
 
 
 

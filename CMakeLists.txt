@@ -28,6 +28,6 @@ target_link_directories(EchecsChaos PRIVATE
 )
 
 # --- 5. LIAISON FINALE ---
-target_link_libraries(EchecsChaos PRIVATE raylib opengl32 gdi32 winmm)
+target_link_libraries(EchecsChaos PRIVATE raylib opengl32 gdi32 winmm wininet)
 # --- 6. RENDRE L'EXE AUTONOME (STATIC LINKING) ---
 target_link_options(EchecsChaos PRIVATE -static-libgcc -static-libstdc++ -static)

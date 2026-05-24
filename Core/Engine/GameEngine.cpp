@@ -1,5 +1,7 @@
 #include "GameEngine.h"
 #include <iostream>
+#include "../Network/Network.h"
+#include "../../json.hpp"
 
 
 
@@ -14,7 +16,6 @@ GameEngine::GameEngine(int cellSize)
       d_settingsScreen(d_settings),
       d_eventManager{d_audioManager}
 {
-    // Appliquer les paramètres chargés
     d_settings.applySettings();
     updateBoardLayout();
     d_audioManager.setVolume(d_settings.getMusicVolume());
@@ -35,6 +36,8 @@ GameEngine::GameEngine(int cellSize)
     
     initBoard();
 
+    d_boardHistory.clear();
+    d_boardHistory.push_back(d_board.toString(PieceColor::White));
 
 }
 
@@ -77,7 +80,6 @@ int GameEngine::getFlippedBoardY(int boardY) const {
 }
 
 void GameEngine::handleInput(Position clickedPos) {
-    // 1. Sécurité de base : clic hors plateau ou case gelée
     if (!d_board.isinBounds(clickedPos)) return;
     if (d_board.getTile(clickedPos).getType() == TileType::Frozen) {
         d_selectedTile = Position::NONE;
@@ -87,25 +89,24 @@ void GameEngine::handleInput(Position clickedPos) {
 
     bool moveExecuted = false;
     PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
-
-    // 2. TENTATIVE DE MOUVEMENT (Si une pièce est déjà sélectionnée)
     if (d_selectedTile.x != -1 && d_selectedTile.y != -1) {
         for (const Position& validMove : d_currentValidMoves) {
             if (clickedPos.x == validMove.x && clickedPos.y == validMove.y) { 
 
                 bool isCapture = d_board.getTile(clickedPos).hasPiece();
-                
-                // --- LOGIQUE SPÉCIALE AVANT MOUVEMENT ---
+                if (isCapture) {
+                    PieceType capturedType = d_board.getTile(clickedPos).getPiece()->getType();
+                    int earnedPoints = ScoreHandler::calculateCaptureScore(capturedType);
+                    d_players[d_currentPlayerIndex].addScore(earnedPoints);
+                }
                 handleCastling(d_selectedTile, clickedPos);
                 handleEnPassant(d_selectedTile, clickedPos);
                 updateEnPassantTarget(d_selectedTile, clickedPos);
 
-                // --- EXÉCUTION DU MOUVEMENT ---
-                // movePieceWithPortal gère la téléportation et retourne la position réelle
                 Position finalPos = d_board.movePieceWithPortal(d_selectedTile, clickedPos);
-                if (finalPos.x == -1) continue; // Mouvement échoué
+                if (finalPos.x == -1) continue; 
 
-                // --- APPLIQUER LA GLISSADE SI TERRAIN GLISSANT ---
+
                 if (d_board.isSlipperyTerrainActive()) {
                     int dirX = 0, dirY = 0;
                     if (finalPos.x > d_selectedTile.x) dirX = 1;
@@ -113,7 +114,7 @@ void GameEngine::handleInput(Position clickedPos) {
                     if (finalPos.y > d_selectedTile.y) dirY = 1;
                     else if (finalPos.y < d_selectedTile.y) dirY = -1;
                     
-                    if (dirX == 0 || dirY == 0) { // Pas de glissade en diagonale
+                    if (dirX == 0 || dirY == 0) { 
                         Position currentPos = finalPos;
                         while (true) {
                             Position nextPos = {currentPos.x + dirX, currentPos.y + dirY};
@@ -128,14 +129,11 @@ void GameEngine::handleInput(Position clickedPos) {
                     }
                 }
 
-                // --- FEEDBACK SONORE ---
                 if (isCapture) {
                     d_audioManager.playCapture();
                 } else {
                     d_audioManager.playMove();
                 }
-
-                // --- PROMOTION ET FIN DE TOUR ---
                 bool promotes = PromotionHandler::checkPromotion(d_board, finalPos);
                 if (promotes) {
                     d_isPromoting = true;
@@ -162,18 +160,14 @@ void GameEngine::handleInput(Position clickedPos) {
             }
         }
     }
-
-    // 3. SÉLECTION D'UNE PIÈCE (Si aucun mouvement n'a été validé ci-dessus)
     if (!moveExecuted) {
         const Tile& tile = d_board.getTile(clickedPos);
         
         if (tile.hasPiece() && (tile.getPiece()->getColor() == currentColor || tile.getPiece()->getType() == PieceType::Idiot)) {
             d_selectedTile = clickedPos;
-            // On calcule les coups légaux (filtre les échecs au roi)
             std::vector<Position> pseudoMoves = tile.getPiece()->getValidMoves(clickedPos, d_board);
             d_currentValidMoves = filterLegalMoves(clickedPos, pseudoMoves);
         } else {
-            // Clic sur case vide ou ennemie : on nettoie la sélection
             d_selectedTile = {-1, -1};
             d_currentValidMoves.clear();
         }
@@ -313,7 +307,10 @@ void GameEngine::run() {
     while (!WindowShouldClose() && !d_shouldQuit) {
         updateSystems(); 
         
-        if (d_gameState == GameState::Playing) {
+        if (d_gameState == GameState::Playing || d_gameState == GameState::WAITING_FOR_AI ||
+            d_gameState == GameState::WhiteWins || d_gameState == GameState::BlackWins ||
+            d_gameState == GameState::Stalemate || d_gameState == GameState::WAITING_FOR_ANALYSIS ||
+            d_gameState == GameState::SHOW_ANALYSIS) {
             processInput(); 
         } else if (d_gameState == GameState::TitleScreen) {
             d_titleScreen.update(GetMouseX(), GetMouseY(), IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
@@ -324,7 +321,7 @@ void GameEngine::run() {
                     break;
                 case TitleScreen::Action::Settings:
                     d_gameState = GameState::Settings;
-                    d_settings.backupCurrentSettings(); // Sauvegarder l'état actuel
+                    d_settings.backupCurrentSettings(); 
                     d_titleScreen.clearAction();
                     break;
                 case TitleScreen::Action::Quit:
@@ -338,16 +335,13 @@ void GameEngine::run() {
             d_settingsScreen.update(GetMouseX(), GetMouseY(), IsMouseButtonPressed(MOUSE_BUTTON_LEFT));
             if (d_settingsScreen.getSelectedAction() == SettingsScreen::Action::Save) {
                     d_settingsScreen.clearAction();
-                // Réappliquer les paramètres après sauvegarde
                 d_settings.applySettings();
                 updateBoardLayout();
                 d_audioManager.setVolume(d_settings.getMusicVolume());
-                // Retourner automatiquement à l'écran titre après sauvegarde
                 d_gameState = GameState::TitleScreen;
             } else if (d_settingsScreen.getSelectedAction() == SettingsScreen::Action::Back) {
                 d_gameState = GameState::TitleScreen;
                 d_settingsScreen.clearAction();
-                // Annuler les changements en restaurant les paramètres sauvegardés
                 d_settings.restoreSettings();
                 d_settings.applySettings();
                 updateBoardLayout();
@@ -429,7 +423,7 @@ void GameEngine::updateBoardLayout() {
 }
 
 void GameEngine::updateSystems() {
-    UpdateMusicStream(d_audioManager.getMusic()); // Mise à jour de la musique
+    UpdateMusicStream(d_audioManager.getMusic()); 
     d_eventManager.update();
 
     if (d_gameState == GameState::Playing && !d_isPromoting) { 
@@ -445,11 +439,197 @@ void GameEngine::updateSystems() {
 }
 
 void GameEngine::processInput() {
-    Player& currentPlayer = d_players[d_currentPlayerIndex];
+    if (d_gameState == GameState::WAITING_FOR_ANALYSIS) {
+        if (d_aiAnalysisFuture.valid() && 
+            d_aiAnalysisFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            
+            std::string reponseTexte = d_aiAnalysisFuture.get();
+            std::cout << "Analyse IA : " << reponseTexte << std::endl;
+            
+            try {
+                auto jsonResponse = nlohmann::json::parse(reponseTexte);
+                d_analysisMoves.clear();
+                if (jsonResponse.is_array()) {
+                    for (auto& item : jsonResponse) {
+                        AnalysisMove am;
+                        am.turn = item.value("tour", 0);
+                        am.comment = item.value("commentaire", "Pas de commentaire");
+                        if (am.turn >= 0 && am.turn < (int)d_boardHistory.size()) {
+                            am.fen = d_boardHistory[am.turn];
+                        } else {
+                            am.fen = d_boardHistory.empty() ? "" : d_boardHistory.back();
+                        }
+                        d_analysisMoves.push_back(am);
+                    }
+                }
+            } catch(const std::exception& e) {
+                std::cerr << "[ERREUR IA ANALYSE] JSON invalide : " << e.what() << std::endl;
+            }
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            d_currentAnalysisIndex = 0;
+            if (!d_analysisMoves.empty()) {
+                d_analysisBoard.loadFromString(d_analysisMoves[0].fen);
+            }
+            d_gameState = GameState::SHOW_ANALYSIS; 
+        }
+        return;
+    }
+
+    if (d_gameState == GameState::SHOW_ANALYSIS) {
         int mouseX = GetMouseX();
         int mouseY = GetMouseY();
+        bool isLeftClick = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+        if (isLeftClick) {
+            if (d_nextAnalysisButton.update(mouseX, mouseY, true)) {
+                if (d_currentAnalysisIndex < (int)d_analysisMoves.size() - 1) {
+                    d_currentAnalysisIndex++;
+                    d_analysisBoard.loadFromString(d_analysisMoves[d_currentAnalysisIndex].fen);
+                    d_audioManager.playButtonPress();
+                }
+            } else if (d_prevAnalysisButton.update(mouseX, mouseY, true)) {
+                if (d_currentAnalysisIndex > 0) {
+                    d_currentAnalysisIndex--;
+                    d_analysisBoard.loadFromString(d_analysisMoves[d_currentAnalysisIndex].fen);
+                    d_audioManager.playButtonPress();
+                }
+            } else if (d_closeAnalysisButton.update(mouseX, mouseY, true)) {
+                d_gameState = GameState::TitleScreen;
+                d_audioManager.playButtonPress();
+            }
+        }
+        return;
+    }
+
+    if (d_gameState == GameState::WhiteWins || d_gameState == GameState::BlackWins || d_gameState == GameState::Stalemate) {
+        int mouseX = GetMouseX();
+        int mouseY = GetMouseY();
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && d_analyzeButton.update(mouseX, mouseY, true)) {
+            d_audioManager.playButtonPress();
+            
+            std::string prompt = "[Role systeme]\nTu es un expert cynique et moqueur en echecs chaotiques.\nVoici l'historique des positions (FEN) de la partie :\n";
+            for (size_t i = 0; i < d_boardHistory.size(); ++i) {
+                prompt += "Tour " + std::to_string(i) + ": " + d_boardHistory[i] + "\n";
+            }
+            prompt += "\nFais une analyse des 3 pires coups joues et fou toi de la gueule des joueur au maximum(et donne le numero du tour associe). Format de Reponse STRICT au format JSON (sans markdown, sans texte supplementaire) :\n";
+            prompt += "[ { \"tour\": X, \"commentaire\": \"...\" } ]\n";
+            
+            d_aiAnalysisFuture = std::async(std::launch::async, askAIAnalysis, prompt);
+            d_gameState = GameState::WAITING_FOR_ANALYSIS;
+        }
+        return;
+    }
+
+    if (d_gameState == GameState::WAITING_FOR_AI) {
+        if (d_aiResponseFuture.valid() && 
+            d_aiResponseFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            
+            std::string reponseTexte = d_aiResponseFuture.get();
+            std::cout << "Le Dieu du Chaos a ordonne : " << reponseTexte << std::endl;
+            
+            try {
+                auto jsonResponse = nlohmann::json::parse(reponseTexte);
+                if (jsonResponse.contains("start_x") && jsonResponse.contains("start_y") && 
+                    jsonResponse.contains("target_x") && jsonResponse.contains("target_y")) {
+                    
+                    Position startPos = {jsonResponse["start_x"].get<int>(), jsonResponse["start_y"].get<int>()};
+                    Position targetPos = {jsonResponse["target_x"].get<int>(), jsonResponse["target_y"].get<int>()};
+                    
+                    
+                    d_selectedTile = {-1, -1};
+                    d_currentValidMoves.clear();
+                    handleInput(startPos);
+                    handleInput(targetPos);
+                }
+            } catch(const std::exception& e) {
+                std::cerr << "[ERREUR IA] Ordre invalide : " << e.what() << std::endl;
+            }
+
+            d_gameState = GameState::Playing; 
+        }
+        return;
+    }
+
+    Player& currentPlayer = d_players[d_currentPlayerIndex];
+    int mouseX = GetMouseX();
+    int mouseY = GetMouseY();
+    bool isLeftClick = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+    if (isLeftClick && d_aiButton.update(mouseX, mouseY, true)) {
+        d_audioManager.playButtonPress();
+        d_isAIPromptOpen = !d_isAIPromptOpen;
+        return;
+    }
+
+    if (d_isAIPromptOpen) {
+        int key = GetCharPressed();
+        while (key > 0) {
+            if ((key >= 32) && (key <= 125) && (d_aiPromptText.length() < 100)) {
+                d_aiPromptText += static_cast<char>(key);
+            }
+            key = GetCharPressed();
+        }
+
+        if (IsKeyPressed(KEY_BACKSPACE) && !d_aiPromptText.empty()) {
+            d_aiPromptText.pop_back();
+        }
+
+        if (IsKeyPressed(KEY_ENTER) && !d_aiPromptText.empty()) {
+            std::string fenPlateau = d_board.toString(d_players[d_currentPlayerIndex].getColor());
+            std::string etatChaos = d_board.getChaosStateString();
+            
+            std::string prompt = "[Role systeme]\n"
+                                 "Tu es l'IA d'un jeu d'echecs CHAOTIQUE. Ton role est de traduire l'ordre naturel du joueur en un coup d'echecs valide.\n\n"
+                                 "[Etat actuel du Jeu]\n"
+                                 "Plateau (FEN) : " + fenPlateau + "\n\n"
+                                 "[Evenements Chaotiques Actuels]\n"
+                                 + etatChaos + "\n"
+                                 "[Pieces Speciales du Jeu]\n"
+                                 "- Chameleon (C) : Mime les deplacements de la derniere piece deplacee. Si c'est un Chameleon, agit comme Reine.\n"
+                                 "- Duck (D) : Se deplace comme un Cavalier et peut capturer les pieces adverses.\n"
+                                 "- Idiot (I) : Se deplace d'une case dans toutes les directions, mais ne peut pas capturer le Roi.\n"
+                                 "- PionDebile (X) : Avance en diagonale sans prendre, capture uniquement droit devant.\n\n"
+                                 "[Coups Legaux Disponibles]\n";
+
+            
+                                 
+            PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
+            for (int x = 0; x < d_board.getWidth(); ++x) {
+                for (int y = 0; y < d_board.getHeight(); ++y) {
+                    Position p = {x, y};
+                    const Tile& tile = d_board.getTile(p);
+                    if (tile.hasPiece() && tile.getPiece()->getColor() == currentColor) {
+                        std::string pieceName = "Piece";
+                        switch (tile.getPiece()->getType()) {
+                            case PieceType::Pawn: pieceName = "Pion"; break;
+                            case PieceType::Rook: pieceName = "Tour"; break;
+                            case PieceType::Knight: pieceName = "Cavalier"; break;
+                            case PieceType::Bishop: pieceName = "Fou"; break;
+                            case PieceType::Queen: pieceName = "Reine"; break;
+                            case PieceType::King: pieceName = "Roi"; break;
+                            default: break;
+                        }
+                        
+                        std::vector<Position> pseudoMoves = tile.getPiece()->getValidMoves(p, d_board);
+                        std::vector<Position> legalMoves = filterLegalMoves(p, pseudoMoves);
+                        for (const auto& move : legalMoves) {
+                            prompt += "- " + pieceName + " de (" + std::to_string(p.x) + "," + std::to_string(p.y) + ") vers (" + std::to_string(move.x) + "," + std::to_string(move.y) + ")\n";
+                        }
+                    }
+                }
+            }
+            prompt += "\n[Ordre du Joueur]\n\"" + d_aiPromptText + "\"\n";
+            prompt += "\n[Format de Reponse STRICT]\nReponds UNIQUEMENT au format JSON (sans markdown, sans texte supplementaire) :\n{ \"start_x\": X, \"start_y\": Y, \"target_x\": X, \"target_y\": Y }\n";
+            std::cout<<prompt<<std::endl;
+            d_aiResponseFuture = std::async(std::launch::async, askAI, prompt);
+            d_gameState = GameState::WAITING_FOR_AI;
+            d_isAIPromptOpen = false;
+            d_aiPromptText.clear();
+        }
+        return; 
+    }
+
+    if (isLeftClick) {
 
         d_cellSize = d_renderer.getCellSize();
         d_offsetX = d_renderer.getOffsetX();
@@ -467,26 +647,19 @@ void GameEngine::processInput() {
         }
         if (d_isShopOpen) {
             d_shopMenu.updateLayout(GetScreenWidth(), GetScreenHeight(), d_shop.getCards().size());
-            // Si on clique en dehors du panneau central, on ferme la boutique
             if (!d_shopMenu.isClickInsidePanel(mouseX, mouseY)) {
                 d_isShopOpen = false;
                 return;
             }
-
-            // On demande au menu sur quelle carte on a cliqué
             auto clickedIndex = d_shopMenu.getClickedCardIndex(mouseX, mouseY, d_shop.getCards().size());
             
             if (clickedIndex.has_value()) {
-                // Tentative d'achat
                 auto boughtCard = d_shop.buyCard(clickedIndex.value(), currentPlayer);
                 if (boughtCard) {
                     currentPlayer.drawCard(std::move(boughtCard)); 
-                    // d_audioManager.playBuySound(); // Optionnel : bruit d'or
                     d_shop.addCard(generateRandomCard());
                 }
             }
-            
-            // On bloque le reste du code (pas de déplacement de pièces en arrière-plan)
             return; 
         }
 
@@ -582,6 +755,61 @@ void GameEngine::renderFrame() {
     } else if (d_gameState == GameState::Settings) {
         d_settingsScreen.draw();
         return;
+    } else if (d_gameState == GameState::WAITING_FOR_ANALYSIS) {
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
+        DrawText("Analyse cynique en cours par l'IA...", GetScreenWidth() / 2 - 200, GetScreenHeight() / 2, 20, RAYWHITE);
+        EndDrawing();
+        return;
+    } else if (d_gameState == GameState::SHOW_ANALYSIS) {
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
+        if (!d_analysisMoves.empty()) {
+            d_renderer.draw(d_analysisBoard, Position::NONE, {}, PieceColor::White, 0, 0, Position::NONE);
+            
+            DrawRectangle(10, GetScreenHeight() - 150, GetScreenWidth() - 20, 140, {0, 0, 0, 180});
+            DrawRectangleLines(10, GetScreenHeight() - 150, GetScreenWidth() - 20, 140, GOLD);
+            
+            std::string text = "Tour " + std::to_string(d_analysisMoves[d_currentAnalysisIndex].turn) + " : " + d_analysisMoves[d_currentAnalysisIndex].comment;
+            int textX = 20;
+            int textY = GetScreenHeight() - 140;
+            std::string currentLine = "";
+            size_t lastSpace = 0;
+            for (size_t i = 0; i < text.size(); ++i) {
+                currentLine += text[i];
+                if (text[i] == ' ') lastSpace = currentLine.size() - 1;
+                
+                if (MeasureText(currentLine.c_str(), 20) > GetScreenWidth() - 60) {
+                    if (lastSpace > 0 && lastSpace < currentLine.size() - 1) {
+                        std::string toDraw = currentLine.substr(0, lastSpace);
+                        DrawText(toDraw.c_str(), textX, textY, 20, RAYWHITE);
+                        currentLine = currentLine.substr(lastSpace + 1);
+                    } else {
+                        DrawText(currentLine.c_str(), textX, textY, 20, RAYWHITE);
+                        currentLine = "";
+                    }
+                    textY += 25;
+                    lastSpace = 0;
+                }
+            }
+            if (!currentLine.empty()) {
+                DrawText(currentLine.c_str(), textX, textY, 20, RAYWHITE);
+            }
+            
+            d_nextAnalysisButton.update(GetMouseX(), GetMouseY(), false);
+            d_prevAnalysisButton.update(GetMouseX(), GetMouseY(), false);
+            d_closeAnalysisButton.update(GetMouseX(), GetMouseY(), false);
+            
+            d_nextAnalysisButton.draw();
+            d_prevAnalysisButton.draw();
+            d_closeAnalysisButton.draw();
+        } else {
+            DrawText("L'IA n'a pas pu analyser la partie.", GetScreenWidth() / 2 - 150, GetScreenHeight() / 2, 20, RAYWHITE);
+            d_closeAnalysisButton.update(GetMouseX(), GetMouseY(), false);
+            d_closeAnalysisButton.draw();
+        }
+        EndDrawing();
+        return;
     }
 
     PieceColor currentColor = d_players[d_currentPlayerIndex].getColor();
@@ -605,11 +833,15 @@ void GameEngine::renderFrame() {
         if (d_board.isKingInCheck(currentColor)) {
             checkedKingPos = d_board.getKingPosition(currentColor);
         }
-        int whiteScore = d_players[0].getScore(); 
-        int blackScore = d_players[1].getScore();
 
-        d_renderer.draw(d_board, d_selectedTile, d_currentValidMoves, currentColor, whiteScore, blackScore, checkedKingPos);
-        d_renderer.drawChrono(getPlayerTimeString(0), getPlayerTimeString(1), currentColor, d_offsetX, d_offsetY);
+        int bottomScore = (currentColor == PieceColor::White) ? d_players[0].getScore() : d_players[1].getScore(); 
+        int topScore = (currentColor == PieceColor::White) ? d_players[1].getScore() : d_players[0].getScore();
+
+        const char* bottomChrono = (currentColor == PieceColor::White) ? getPlayerTimeString(0) : getPlayerTimeString(1);
+        const char* topChrono = (currentColor == PieceColor::White) ? getPlayerTimeString(1) : getPlayerTimeString(0);
+
+        d_renderer.draw(d_board, d_selectedTile, d_currentValidMoves, currentColor, bottomScore, topScore, checkedKingPos);
+        d_renderer.drawChrono(bottomChrono, topChrono, currentColor, d_offsetX, d_offsetY);
 
         std::vector<VisualEffect> chaosEffects = d_eventManager.getActiveVisualEffects();
         d_renderer.drawEffects(chaosEffects);
@@ -632,8 +864,13 @@ void GameEngine::renderFrame() {
             if (d_gameState == GameState::BlackWins) message = "LES NOIRS GAGNENT !";  
             if (d_gameState == GameState::Stalemate) message = "PAT ! MATCH NUL !";
 
-            int textWidth = MeasureText(message, 30);
-            DrawText(message, (GetScreenWidth() / 2) - (textWidth / 2), GetScreenHeight() / 2, 30, RAYWHITE);
+            if (d_gameState == GameState::WhiteWins || d_gameState == GameState::BlackWins || d_gameState == GameState::Stalemate) {
+                int textWidth = MeasureText(message, 30);
+                DrawText(message, (GetScreenWidth() / 2) - (textWidth / 2), GetScreenHeight() / 2 - 50, 30, RAYWHITE);
+                
+                d_analyzeButton.update(GetMouseX(), GetMouseY(), false);
+                d_analyzeButton.draw();
+            }
         }
         
         if (d_isHandVisible) {
@@ -651,10 +888,32 @@ void GameEngine::renderFrame() {
         d_toggleHandButton.update(GetMouseX(), GetMouseY(), false); 
         d_toggleHandButton.draw();
 
+                d_aiButton.update(GetMouseX(), GetMouseY(), false);
+        d_aiButton.draw();
+        
+        if (d_isAIPromptOpen) {
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), {0, 0, 0, 150});
+            
+            int boxWidth = 600;
+            int boxHeight = 100;
+            int boxX = (GetScreenWidth() - boxWidth) / 2;
+            int boxY = (GetScreenHeight() - boxHeight) / 2;
+            
+            DrawRectangle(boxX, boxY, boxWidth, boxHeight, LIGHTGRAY);
+            DrawRectangleLines(boxX, boxY, boxWidth, boxHeight, DARKGRAY);
+            
+            DrawText("Que dois-je faire ? (Appuyez sur Entree pour valider)", boxX + 10, boxY + 10, 20, DARKGRAY);
+            DrawText(d_aiPromptText.c_str(), boxX + 10, boxY + 50, 20, MAROON);
+        }
+
         
         if (d_isTargeting) {
             DrawRectangle(0, 0, GetScreenWidth(), 40, Fade(BLACK, 0.8f));
             DrawText("MODE CIBLAGE : Cliquez sur une case du plateau (Clic droit pour annuler)", 150, 10, 20, YELLOW);
+        }
+        
+        if (d_gameState == GameState::WAITING_FOR_AI) {
+            DrawText("Invocation de la magie noire en cours...", 10, 10, 20, RED);
         }
         
     EndDrawing();
@@ -662,8 +921,7 @@ void GameEngine::renderFrame() {
 
 void GameEngine::endPlayerTurn() {
     d_turnCount++;
-    
-    // Tous les 2 tours de joueurs (après Blanc et Noir), le canard joue
+
     if (d_turnCount % 2 == 0) {
         Position duckPos = {-1, -1};
         for (int y = 0; y < d_board.getHeight(); ++y) {
@@ -699,10 +957,8 @@ void GameEngine::endPlayerTurn() {
         // Sinon, on passe simplement au joueur suivant
         d_currentPlayerIndex = (d_currentPlayerIndex + 1) % d_players.size();
     }
+    d_boardHistory.push_back(d_board.toString(d_players[d_currentPlayerIndex].getColor()));
 }
 
 void GameEngine::applySlipperyTerrain(Position startPos, Position targetPos) {
-    // Fonction conservée pour correspondre à la déclaration dans GameEngine.h,
-    // mais la vraie logique a été intégrée directement dans handleInput()
-    // car elle a besoin de modifier finalPos par référence.
 }

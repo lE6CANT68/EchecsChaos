@@ -56,8 +56,8 @@ private:
 
     std::vector<std::function<std::unique_ptr<Event>()>> d_eventGenerators;
 
-    int d_eventProbability = 100; 
+    int d_eventProbability = 5; 
 
     const AudioManager& d_audio;
-    bool d_boardHasExpanded = false; // Track si l'événement d'expansion s'est produit 
+    bool d_boardHasExpanded = false; 
 };
