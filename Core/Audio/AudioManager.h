@@ -11,14 +11,15 @@ public:
     void playMove() const;
     void playCapture() const;
     void playButtonPress() const;
-    void playMusic() const;
+    void playBaseMusic() const;
+    void playGeminiWaitMusic();
+    void stopCurrentMusic() const;
     void playGameOver() const;
     void playVictory() const;
     void playStalemate() const;
 
+    void updateMusicStream() const;
     void setVolume(float volume);
-
-    Music getMusic() const { return d_music; }
 
 private:
     Sound d_soundMove;
@@ -29,6 +30,7 @@ private:
     Sound d_soundStalemate;
     float d_volume;
     
-
-    Music d_music;
+    Music d_baseMusic;
+    Music d_geminiMusic;
+    bool d_isGeminiMusicActive = false;
 };

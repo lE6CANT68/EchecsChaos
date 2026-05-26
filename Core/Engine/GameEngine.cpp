@@ -1,4 +1,5 @@
 #include "GameEngine.h"
+#include <algorithm>
 #include <iostream>
 #include "../Network/Network.h"
 #include "../../json.hpp"
@@ -423,7 +424,7 @@ void GameEngine::updateBoardLayout() {
 }
 
 void GameEngine::updateSystems() {
-    UpdateMusicStream(d_audioManager.getMusic()); 
+    d_audioManager.updateMusicStream();
     d_eventManager.update();
 
     if (d_gameState == GameState::Playing && !d_isPromoting) { 
@@ -494,6 +495,7 @@ void GameEngine::processInput() {
                     d_audioManager.playButtonPress();
                 }
             } else if (d_closeAnalysisButton.update(mouseX, mouseY, true)) {
+                d_audioManager.playBaseMusic();
                 d_gameState = GameState::TitleScreen;
                 d_audioManager.playButtonPress();
             }
@@ -515,6 +517,7 @@ void GameEngine::processInput() {
             prompt += "[ { \"tour\": X, \"commentaire\": \"...\" } ]\n";
             
             d_aiAnalysisFuture = std::async(std::launch::async, askAIAnalysis, prompt);
+            d_audioManager.playGeminiWaitMusic();
             d_gameState = GameState::WAITING_FOR_ANALYSIS;
         }
         return;
@@ -545,6 +548,7 @@ void GameEngine::processInput() {
                 std::cerr << "[ERREUR IA] Ordre invalide : " << e.what() << std::endl;
             }
 
+            d_audioManager.playBaseMusic();
             d_gameState = GameState::Playing; 
         }
         return;
@@ -622,6 +626,7 @@ void GameEngine::processInput() {
             prompt += "\n[Format de Reponse STRICT]\nReponds UNIQUEMENT au format JSON (sans markdown, sans texte supplementaire) :\n{ \"start_x\": X, \"start_y\": Y, \"target_x\": X, \"target_y\": Y }\n";
             std::cout<<prompt<<std::endl;
             d_aiResponseFuture = std::async(std::launch::async, askAI, prompt);
+            d_audioManager.playGeminiWaitMusic();
             d_gameState = GameState::WAITING_FOR_AI;
             d_isAIPromptOpen = false;
             d_aiPromptText.clear();
@@ -757,54 +762,109 @@ void GameEngine::renderFrame() {
         return;
     } else if (d_gameState == GameState::WAITING_FOR_ANALYSIS) {
         BeginDrawing();
-        ClearBackground(DARKGRAY);
-        DrawText("Analyse cynique en cours par l'IA...", GetScreenWidth() / 2 - 200, GetScreenHeight() / 2, 20, RAYWHITE);
+        ClearBackground({10, 10, 30, 255});
+
+        float animTime = GetTime();
+        int centerX = GetScreenWidth() / 2;
+        int centerY = GetScreenHeight() / 2;
+        float pulse = 1.0f + 0.15f * sinf(animTime * 3.5f);
+
+        DrawCircleGradient(centerX, centerY, 140 * pulse, {30, 30, 90, 180}, {8, 8, 40, 10});
+        DrawCircleLines(centerX, centerY, 140 * pulse, SKYBLUE);
+        DrawCircleLines(centerX, centerY, 110 * pulse, LIGHTGRAY);
+        DrawCircleLines(centerX, centerY, 80 * pulse, {255, 215, 0, 120});
+
+        DrawText("ANALYSE DE FIN DE PARTIE EN COURS", centerX - 310, centerY - 90, 28, GOLD);
+        DrawText("Patiente pendant la génération du rapport final.", centerX - 300, centerY - 50, 20, LIGHTGRAY);
+
+        for (int i = 0; i < 5; ++i) {
+            float angle = animTime * 1.8f + i * (2 * PI / 5.0f);
+            float x = centerX + cosf(angle) * (90.0f + 10.0f * sinf(animTime * 0.8f + i));
+            float y = centerY + sinf(angle) * (90.0f + 10.0f * cosf(animTime * 0.8f + i));
+            float alpha = 0.4f + 0.6f * ((i + (int)(animTime * 2.0f)) % 5) / 4.0f;
+            DrawCircle((int)x, (int)y, 10, {180, 220, 255, (unsigned char)(alpha * 255)});
+        }
         EndDrawing();
         return;
     } else if (d_gameState == GameState::SHOW_ANALYSIS) {
         BeginDrawing();
-        ClearBackground(DARKGRAY);
+        DrawRectangleGradientEx({0.0f, 0.0f, (float)GetScreenWidth(), (float)GetScreenHeight()}, {8, 8, 24, 255}, {18, 18, 60, 255}, {12, 12, 40, 255}, {25, 20, 80, 255});
+
+        int leftPanelX = 40;
+        int leftPanelY = 60;
+        int leftPanelW = GetScreenWidth() / 2 - 60;
+        int leftPanelH = GetScreenHeight() - 120;
+
+        int rightPanelX = GetScreenWidth() / 2 + 20;
+        int rightPanelY = 60;
+        int rightPanelW = GetScreenWidth() / 2 - 60;
+        int rightPanelH = GetScreenHeight() - 120;
+
+        DrawRectangle(leftPanelX, leftPanelY, leftPanelW, leftPanelH, Fade(BLACK, 0.75f));
+        DrawRectangle(rightPanelX, rightPanelY, rightPanelW, rightPanelH, Fade(BLACK, 0.65f));
+        DrawRectangleLines(leftPanelX, leftPanelY, leftPanelW, leftPanelH, {220, 200, 80, 255});
+        DrawRectangleLines(rightPanelX, rightPanelY, rightPanelW, rightPanelH, {90, 180, 255, 220});
+
+        DrawText("RAPPORT D'ANALYSE DU CHAOS", leftPanelX + 24, leftPanelY + 20, 28, GOLD);
+        DrawText("Plateau final et commentaire", rightPanelX + 24, rightPanelY + 20, 22, SKYBLUE);
+
         if (!d_analysisMoves.empty()) {
+            float oldCellSize = d_renderer.getCellSize();
+            int oldOffsetX = d_renderer.getOffsetX();
+            int oldOffsetY = d_renderer.getOffsetY();
+
+            int boardMaxWidth = leftPanelW - 40;
+            int boardMaxHeight = leftPanelH - 120;
+            float analysisCellSize = std::min(boardMaxWidth / 8.0f, boardMaxHeight / 8.0f);
+            int boardOffsetX = leftPanelX + (leftPanelW - (int)(analysisCellSize * 8)) / 2;
+            int boardOffsetY = leftPanelY + 80;
+            d_renderer.updateLayout(analysisCellSize, boardOffsetX, boardOffsetY);
             d_renderer.draw(d_analysisBoard, Position::NONE, {}, PieceColor::White, 0, 0, Position::NONE);
-            
-            DrawRectangle(10, GetScreenHeight() - 150, GetScreenWidth() - 20, 140, {0, 0, 0, 180});
-            DrawRectangleLines(10, GetScreenHeight() - 150, GetScreenWidth() - 20, 140, GOLD);
-            
+            d_renderer.updateLayout(oldCellSize, oldOffsetX, oldOffsetY);
+
+            int textX = rightPanelX + 30;
+            int textY = rightPanelY + 70;
+            int textW = rightPanelW - 60;
+            DrawText("Commentaire :", textX, textY, 22, WHITE);
+            textY += 40;
+
             std::string text = "Tour " + std::to_string(d_analysisMoves[d_currentAnalysisIndex].turn) + " : " + d_analysisMoves[d_currentAnalysisIndex].comment;
-            int textX = 20;
-            int textY = GetScreenHeight() - 140;
-            std::string currentLine = "";
+            std::string currentLine;
             size_t lastSpace = 0;
             for (size_t i = 0; i < text.size(); ++i) {
                 currentLine += text[i];
                 if (text[i] == ' ') lastSpace = currentLine.size() - 1;
-                
-                if (MeasureText(currentLine.c_str(), 20) > GetScreenWidth() - 60) {
+                if (MeasureText(currentLine.c_str(), 20) > textW) {
                     if (lastSpace > 0 && lastSpace < currentLine.size() - 1) {
                         std::string toDraw = currentLine.substr(0, lastSpace);
                         DrawText(toDraw.c_str(), textX, textY, 20, RAYWHITE);
                         currentLine = currentLine.substr(lastSpace + 1);
                     } else {
                         DrawText(currentLine.c_str(), textX, textY, 20, RAYWHITE);
-                        currentLine = "";
+                        currentLine.clear();
                     }
-                    textY += 25;
+                    textY += 28;
                     lastSpace = 0;
                 }
             }
             if (!currentLine.empty()) {
                 DrawText(currentLine.c_str(), textX, textY, 20, RAYWHITE);
             }
-            
-            d_nextAnalysisButton.update(GetMouseX(), GetMouseY(), false);
+
+            int buttonY = rightPanelY + rightPanelH - 70;
+            d_prevAnalysisButton.setPosition(rightPanelX + 40, buttonY);
+            d_nextAnalysisButton.setPosition(rightPanelX + 220, buttonY);
+            d_closeAnalysisButton.setPosition(rightPanelX + rightPanelW - d_closeAnalysisButton.getWidth() - 40, buttonY);
+
             d_prevAnalysisButton.update(GetMouseX(), GetMouseY(), false);
+            d_nextAnalysisButton.update(GetMouseX(), GetMouseY(), false);
             d_closeAnalysisButton.update(GetMouseX(), GetMouseY(), false);
-            
-            d_nextAnalysisButton.draw();
+
             d_prevAnalysisButton.draw();
+            d_nextAnalysisButton.draw();
             d_closeAnalysisButton.draw();
         } else {
-            DrawText("L'IA n'a pas pu analyser la partie.", GetScreenWidth() / 2 - 150, GetScreenHeight() / 2, 20, RAYWHITE);
+            DrawText("L'IA n'a pas pu analyser la partie.", rightPanelX + 30, rightPanelY + 120, 24, RAYWHITE);
             d_closeAnalysisButton.update(GetMouseX(), GetMouseY(), false);
             d_closeAnalysisButton.draw();
         }
@@ -913,7 +973,24 @@ void GameEngine::renderFrame() {
         }
         
         if (d_gameState == GameState::WAITING_FOR_AI) {
-            DrawText("Invocation de la magie noire en cours...", 10, 10, 20, RED);
+            float animTime = GetTime();
+            int dotCount = ((int)(animTime * 2.0f) % 3) + 1;
+            std::string dots(dotCount, '.');
+            std::string waitingText = std::string("Invocation de la magie noire en cours") + dots;
+            DrawText(waitingText.c_str(), 10, 10, 20, RED);
+            DrawText("Patientez, le jeu n'est pas fig\xC3\xA9.", 10, 40, 20, ORANGE);
+
+            Vector2 center = { (float)GetScreenWidth() - 80.0f, 80.0f };
+            const int circleCount = 5;
+            const float radius = 42.0f;
+            for (int i = 0; i < circleCount; ++i) {
+                float angle = animTime * 3.0f + i * (2 * PI / circleCount);
+                float x = center.x + cosf(angle) * radius;
+                float y = center.y + sinf(angle) * radius;
+                float alpha = 0.25f + 0.75f * ((i + (int)(animTime * 2.0f)) % circleCount) / (float)(circleCount - 1);
+                Color c = { 255, 255, 255, (unsigned char)(alpha * 255) };
+                DrawCircle((int)x, (int)y, 8, c);
+            }
         }
         
     EndDrawing();
