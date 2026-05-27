@@ -5,9 +5,9 @@
 EventManager::EventManager(const AudioManager& audio) 
     : d_messageTimer(0.0f), d_currentMessage(""), d_audio(audio) 
 {
-   // d_eventGenerators.push_back([this]() {
-    //    return std::make_unique<MeteoriteEvent>(this->d_audio);
-   //});
+   d_eventGenerators.push_back([this]() {
+        return std::make_unique<MeteoriteEvent>(this->d_audio);
+   });
    d_eventGenerators.push_back([this]() {
         return std::make_unique<IdiotEvent>(this->d_audio);
    });
@@ -23,9 +23,6 @@ EventManager::EventManager(const AudioManager& audio)
    d_eventGenerators.push_back([this]() {
         return std::make_unique<SlipperyTerrainEvent>(this->d_audio);
    });
-     d_eventGenerators.push_back([this]() {
-         return std::make_unique<MeteoriteEvent>(this->d_audio);
-     });
      d_eventGenerators.push_back([this]() {
          return std::make_unique<FreezeEvent>(Position::NONE, Config::Event::FREEZE_EVENT_DURATION, this->d_audio);
      });

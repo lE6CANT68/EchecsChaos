@@ -19,6 +19,9 @@ namespace PiecePaths{
         constexpr const char* ROOK_WHITE = "../assets/Pieces/w_rook.png"; 
         constexpr const char* ROOK_BLACK = "../assets/Pieces/b_rook.png";
 
-        
+        constexpr const char* DUCK_WHITE = "../assets/Pieces/duck.png";
+        constexpr const char* DUCK_BLACK = "../assets/Pieces/duck.png";
 
+        constexpr const char* IDIOT_WHITE = "../assets/Pieces/idiot.png";
+        constexpr const char* IDIOT_BLACK = "../assets/Pieces/idiot.png";
 }
