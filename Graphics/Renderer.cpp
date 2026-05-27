@@ -11,6 +11,7 @@ Renderer::Renderer(float cellSize) : d_cellSize(cellSize), d_offsetX(Config::Gra
     d_drawers[PieceType::Idiot] = std::make_unique<IdiotDrawer>();
     d_drawers[PieceType::PionDebile] = std::make_unique<PionDebileDrawer>();
     d_drawers[PieceType::Duck] = std::make_unique<DuckDrawer>();
+    d_drawers[PieceType::Chameleon] = std::make_unique<ChameleonDrawer>();
 }
 
 void Renderer::updateDimensionsForBoard(const Board& board) {

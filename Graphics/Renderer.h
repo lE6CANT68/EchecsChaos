@@ -15,6 +15,7 @@
 #include "Pieces/IdiotDrawer.h"
 #include "Pieces/PionDebileDrawer.h"
 #include "Pieces/DuckDrawer.h"
+#include "Pieces/ChameleonDrawer.h"
 #include "PortalDrawer.h"
 #include "../Graphics/UI/PromotionMenu.h"
 #include "../Graphics/VisualEffect.h"
