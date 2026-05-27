@@ -11,6 +11,7 @@ Renderer::Renderer(float cellSize) : d_cellSize(cellSize), d_offsetX(Config::Gra
     d_drawers[PieceType::Idiot] = std::make_unique<IdiotDrawer>();
     d_drawers[PieceType::PionDebile] = std::make_unique<PionDebileDrawer>();
     d_drawers[PieceType::Duck] = std::make_unique<DuckDrawer>();
+    d_drawers[PieceType::Chameleon] = std::make_unique<ChameleonDrawer>();
 }
 
 void Renderer::updateDimensionsForBoard(const Board& board) {
@@ -348,8 +349,13 @@ void Renderer::drawShop(const Shop& shop, const ShopMenu& menu, bool isShopOpen)
             int cardY = menu.getStartY();
             d_cardRenderer.drawCard(*cards[i], cardX, cardY, false);
             
-            int price = Shop::getPrice(cards[i]->getRarity());
-            DrawText(TextFormat("%d Points", price), cardX + 10, cardY + menu.getCardHeight() + 10, 20, GOLD);
+            int price = cards[i]->getCost();
+            const char* priceText = TextFormat("%d", price);
+            int priceWidth = MeasureText(priceText, 24);
+            int priceCenterX = cardX + (menu.getCardWidth() - priceWidth) / 2;
+            int priceY = cardY + menu.getCardHeight() + 8;
+            
+            DrawText(priceText, priceCenterX, priceY, 24, GOLD);
         }
     }
 }

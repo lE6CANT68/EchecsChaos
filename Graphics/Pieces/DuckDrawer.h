@@ -1,31 +1,41 @@
 #pragma once
 #include "PieceDrawer.h"
+#include "raylib.h"
+#include <algorithm>
 
 class DuckDrawer : public PieceDrawer {
+private:
+    Texture2D d_duckTexture;
+
 public:
-    DuckDrawer() : PieceDrawer("", "") {}
+    DuckDrawer() : PieceDrawer("", "") {
+        d_duckTexture = LoadTexture("../assets/Pieces/duck.png");
+        GenTextureMipmaps(&d_duckTexture);
+        SetTextureFilter(d_duckTexture, TEXTURE_FILTER_BILINEAR);
+    }
+    
+    ~DuckDrawer() override {
+        if (d_duckTexture.id != 0) UnloadTexture(d_duckTexture);
+    }
     
     void draw(float centerX, float centerY, Color pieceColor, float cellSize) const override {
-        // Couleur orange pour le canard (ignore pieceColor)
-        Color duckColor = ORANGE;
+        if (d_duckTexture.id != 0) {
+            float pieceSizeFactor = 0.85f;
+            float maxImageDim = (float)std::max(d_duckTexture.width, d_duckTexture.height);
+            float scale = (cellSize * pieceSizeFactor) / maxImageDim;
+            float actualWidth = d_duckTexture.width * scale;
+            float actualHeight = d_duckTexture.height * scale;
 
-        // Dessin du cercle de bordure
-        float radius = (cellSize / 2.0f) * 0.7f;
-        DrawCircleLines((int)centerX, (int)centerY, (int)radius, duckColor);
-        
-        // Remplissage léger
-        DrawCircle((int)centerX, (int)centerY, radius - 2.0f, Fade(duckColor, 0.3f));
+            float offsetX = 2.0f;
+            float offsetY = -0.0f;
+            
+            Vector2 pos = { 
+                centerX - (actualWidth / 2.0f) + offsetX, 
+                centerY - (actualHeight / 2.0f) + offsetY
+            };
 
-        // Dessin du "D" au centre
-        const char* text = "D";
-        
-        int fontSize = (int)(cellSize * 0.6f);
-        int textWidth = MeasureText(text, fontSize);
-        
-        DrawText(text, 
-                 (int)(centerX - textWidth / 2), 
-                 (int)(centerY - fontSize / 2), 
-                 fontSize, 
-                 duckColor);
+            DrawTextureEx(d_duckTexture, pos, 0.0f, scale, WHITE);
+        }
     }
+
 };

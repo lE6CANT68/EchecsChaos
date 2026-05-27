@@ -1,30 +1,41 @@
 #pragma once
 #include "PieceDrawer.h"
-#include "../Core/Config/PiecesPath.h"
 #include "raylib.h"
+#include <algorithm>
 
 class IdiotDrawer : public PieceDrawer {
+private:
+    Texture2D d_idiotTexture;
+
 public:
-
-    IdiotDrawer() : PieceDrawer(PiecePaths::PAWN_WHITE, PiecePaths::PAWN_BLACK) {}
-
-
-    void draw(float centerX, float centerY, Color pieceColor, float cellSize) const override 
-    {
-
-        float radius = (cellSize / 2.0f) * 0.8f; 
-        DrawCircle((int)centerX, (int)centerY, radius, PURPLE);
-
-
-        DrawCircleLines((int)centerX, (int)centerY, radius, YELLOW);
-
-        const char* text = "I";
-        int fontSize = (int)(cellSize * 0.7f); 
-        int textWidth = MeasureText(text, fontSize);
-        
-        int textX = (int)(centerX - (textWidth / 2.0f));
-        int textY = (int)(centerY - (fontSize / 2.0f));
-
-        DrawText(text, textX, textY, fontSize, YELLOW);
+    IdiotDrawer() : PieceDrawer("", "") {
+        d_idiotTexture = LoadTexture("../assets/Pieces/idiot.png");
+        GenTextureMipmaps(&d_idiotTexture);
+        SetTextureFilter(d_idiotTexture, TEXTURE_FILTER_BILINEAR);
     }
+    
+    ~IdiotDrawer() override {
+        if (d_idiotTexture.id != 0) UnloadTexture(d_idiotTexture);
+    }
+    
+    void draw(float centerX, float centerY, Color pieceColor, float cellSize) const override {
+        if (d_idiotTexture.id != 0) {
+            float pieceSizeFactor = 0.85f;
+            float maxImageDim = (float)std::max(d_idiotTexture.width, d_idiotTexture.height);
+            float scale = (cellSize * pieceSizeFactor) / maxImageDim;
+            float actualWidth = d_idiotTexture.width * scale;
+            float actualHeight = d_idiotTexture.height * scale;
+
+            float offsetX = 2.0f;
+            float offsetY = -0.0f;
+            
+            Vector2 pos = { 
+                centerX - (actualWidth / 2.0f) + offsetX, 
+                centerY - (actualHeight / 2.0f) + offsetY
+            };
+
+            DrawTextureEx(d_idiotTexture, pos, 0.0f, scale, WHITE);
+        }
+    }
+
 };
