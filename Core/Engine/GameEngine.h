@@ -97,6 +97,7 @@ private:
     void initBoard();
     void handleInput(Position clickedPos);
     int getFlippedBoardY(int boardY) const;
+    void drawAIMessageBubble();
 
     void updateGameState();
     void updateSystems();
@@ -126,6 +127,9 @@ private:
     Button d_aiButton{ 380, 10, "IA" };
     bool d_isAIPromptOpen = false;
     std::string d_aiPromptText = "";
+    std::string d_aiCurrentMessage = "";
+    float d_aiMessageTime = 0.0f;
+    static constexpr float AI_MESSAGE_DURATION = 4.0f;
 
     std::vector<std::string> d_boardHistory;
     std::future<std::string> d_aiAnalysisFuture;

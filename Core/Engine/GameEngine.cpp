@@ -538,6 +538,10 @@ void GameEngine::processInput() {
                     Position startPos = {jsonResponse["start_x"].get<int>(), jsonResponse["start_y"].get<int>()};
                     Position targetPos = {jsonResponse["target_x"].get<int>(), jsonResponse["target_y"].get<int>()};
                     
+                    if (jsonResponse.contains("message")) {
+                        d_aiCurrentMessage = jsonResponse["message"].get<std::string>();
+                        d_aiMessageTime = GetTime();
+                    }
                     
                     d_selectedTile = {-1, -1};
                     d_currentValidMoves.clear();
@@ -623,7 +627,7 @@ void GameEngine::processInput() {
                 }
             }
             prompt += "\n[Ordre du Joueur]\n\"" + d_aiPromptText + "\"\n";
-            prompt += "\n[Format de Reponse STRICT]\nReponds UNIQUEMENT au format JSON (sans markdown, sans texte supplementaire) :\n{ \"start_x\": X, \"start_y\": Y, \"target_x\": X, \"target_y\": Y }\n";
+            prompt += "\n[Format de Reponse STRICT]\nReponds UNIQUEMENT au format JSON (sans markdown, sans texte supplementaire) :\n{ \"start_x\": X, \"start_y\": Y, \"target_x\": X, \"target_y\": Y, \"message\": \"Commentaire court et naturel sur ton choix\" }\n";
             std::cout<<prompt<<std::endl;
             d_aiResponseFuture = std::async(std::launch::async, askAI, prompt);
             d_audioManager.playGeminiWaitMusic();
@@ -993,6 +997,7 @@ void GameEngine::renderFrame() {
             }
         }
         
+        drawAIMessageBubble();
     EndDrawing();
 }
 
@@ -1039,3 +1044,66 @@ void GameEngine::endPlayerTurn() {
 
 void GameEngine::applySlipperyTerrain(Position startPos, Position targetPos) {
 }
+
+void GameEngine::drawAIMessageBubble() {
+    if (d_aiCurrentMessage.empty()) return;
+    
+    float timeElapsed = GetTime() - d_aiMessageTime;
+    if (timeElapsed > AI_MESSAGE_DURATION) {
+        d_aiCurrentMessage.clear();
+        return;
+    }
+    
+    // Fade out effect
+    float alpha = 1.0f;
+    if (timeElapsed > AI_MESSAGE_DURATION - 0.5f) {
+        alpha = (AI_MESSAGE_DURATION - timeElapsed) / 0.5f;
+    }
+    
+    // Bubble position: top-right area
+    int bubbleX = GetScreenWidth() - 400;
+    int bubbleY = 50;
+    int bubbleW = 380;
+    int textX = bubbleX + 20;
+    int textY = bubbleY + 20;
+    int textW = bubbleW - 40;
+    
+    // Draw background bubble
+    DrawRectangle(bubbleX, bubbleY, bubbleW, 100, Fade({20, 20, 60, 255}, alpha));
+    DrawRectangle(bubbleX, bubbleY, bubbleW, 100, Fade({100, 150, 255, 100}, alpha));
+    DrawRectangleLines(bubbleX, bubbleY, bubbleW, 100, Fade({150, 200, 255, 255}, alpha * 0.8f));
+    
+    // Draw icon/indicator
+    DrawCircle(bubbleX + 20, bubbleY + 20, 8, Fade(SKYBLUE, alpha));
+    
+    // Wrap and draw text
+    std::string currentLine;
+    size_t lastSpace = 0;
+    int currentY = textY;
+    
+    for (size_t i = 0; i < d_aiCurrentMessage.size(); ++i) {
+        currentLine += d_aiCurrentMessage[i];
+        
+        if (d_aiCurrentMessage[i] == ' ') {
+            lastSpace = currentLine.size() - 1;
+        }
+        
+        if (MeasureText(currentLine.c_str(), 16) > textW) {
+            if (lastSpace > 0 && lastSpace < currentLine.size() - 1) {
+                std::string toDraw = currentLine.substr(0, lastSpace);
+                DrawText(toDraw.c_str(), textX, currentY, 16, Fade(RAYWHITE, alpha));
+                currentLine = currentLine.substr(lastSpace + 1);
+            } else {
+                DrawText(currentLine.c_str(), textX, currentY, 16, Fade(RAYWHITE, alpha));
+                currentLine.clear();
+            }
+            currentY += 22;
+            lastSpace = 0;
+        }
+    }
+    
+    if (!currentLine.empty()) {
+        DrawText(currentLine.c_str(), textX, currentY, 16, Fade(RAYWHITE, alpha));
+    }
+}
+
