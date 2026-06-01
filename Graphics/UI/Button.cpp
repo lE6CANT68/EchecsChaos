@@ -58,3 +58,25 @@ float Button::getWidth() const {
 float Button::getHeight() const {
     return d_bounds.height;
 }
+
+void Button::setSize(float w, float h) {
+    d_bounds.width = w;
+    d_bounds.height = h;
+}
+
+void Button::setText(const std::string& text) {
+    d_text = text;
+    int textWidth = MeasureText(d_text.c_str(), FONT_SIZE);
+    float width = textWidth + (PADDING_X * 2);
+    float height = FONT_SIZE + (PADDING_Y * 2);
+    d_bounds.width = width;
+    d_bounds.height = height;
+}
+
+float Button::getTextWidth() const {
+    return (float)MeasureText(d_text.c_str(), FONT_SIZE);
+}
+
+float Button::getPreferredWidth() const {
+    return getTextWidth() + (PADDING_X * 2);
+}

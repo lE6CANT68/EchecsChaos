@@ -106,22 +106,71 @@ std::string sendPromptToGemini(const std::string& prompt) {
     }
 }
 
+static std::string trimString(const std::string& str) {
+    const std::string whitespace = " \t\n\r\f\v";
+    size_t start = str.find_first_not_of(whitespace);
+    if (start == std::string::npos) return "";
+    size_t end = str.find_last_not_of(whitespace);
+    return str.substr(start, end - start + 1);
+}
+
+static std::string extractJsonBlock(const std::string& text, char openChar, char closeChar) {
+    int depth = 0;
+    size_t start = std::string::npos;
+    for (size_t i = 0; i < text.size(); ++i) {
+        if (text[i] == openChar) {
+            if (depth == 0) {
+                start = i;
+            }
+            depth++;
+        } else if (text[i] == closeChar && depth > 0) {
+            depth--;
+            if (depth == 0 && start != std::string::npos) {
+                return text.substr(start, i - start + 1);
+            }
+        }
+    }
+    return "";
+}
+
+static std::string extractJson(const std::string& aiText) {
+    std::string trimmed = trimString(aiText);
+    try {
+        auto parsed = nlohmann::json::parse(trimmed);
+        (void)parsed;
+        return trimmed;
+    } catch (...) {
+    }
+
+    std::string jsonObject = extractJsonBlock(trimmed, '{', '}');
+    if (!jsonObject.empty()) {
+        try {
+            auto parsed = nlohmann::json::parse(jsonObject);
+            (void)parsed;
+            return jsonObject;
+        } catch (...) {
+        }
+    }
+
+    std::string jsonArray = extractJsonBlock(trimmed, '[', ']');
+    if (!jsonArray.empty()) {
+        try {
+            auto parsed = nlohmann::json::parse(jsonArray);
+            (void)parsed;
+            return jsonArray;
+        } catch (...) {
+        }
+    }
+
+    return trimmed;
+}
+
 std::string askAI(const std::string& prompt) {
     std::string aiText = sendPromptToGemini(prompt);
-    size_t firstBrace = aiText.find('{');
-    size_t lastBrace = aiText.find_last_of('}');
-    if (firstBrace != std::string::npos && lastBrace != std::string::npos && lastBrace >= firstBrace) {
-        return aiText.substr(firstBrace, lastBrace - firstBrace + 1);
-    }
-    return aiText;
+    return extractJson(aiText);
 }
 
 std::string askAIAnalysis(const std::string& prompt) {
     std::string aiText = sendPromptToGemini(prompt);
-    size_t firstBracket = aiText.find('[');
-    size_t lastBracket = aiText.find_last_of(']');
-    if (firstBracket != std::string::npos && lastBracket != std::string::npos && lastBracket >= firstBracket) {
-        return aiText.substr(firstBracket, lastBracket - firstBracket + 1);
-    }
-    return aiText;
+    return extractJson(aiText);
 }

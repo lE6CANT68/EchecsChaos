@@ -46,7 +46,8 @@ enum class GameState {
     BlackWins,
     Stalemate,
     WAITING_FOR_ANALYSIS,
-    SHOW_ANALYSIS
+    SHOW_WORST_ANALYSIS,
+    SHOW_STYLE_ANALYSIS
 };
 
 class GameEngine {
@@ -133,20 +134,41 @@ private:
 
     std::vector<std::string> d_boardHistory;
     std::future<std::string> d_aiAnalysisFuture;
+    std::future<std::string> d_aiBackgroundAnalysisFuture;
     Button d_analyzeButton{ 300, 500, "ANALYSER LA PARTIE" };
-    
+    bool d_isSequentialAnalysis = false;
+    bool d_isBackgroundAnalysisPending = false;
+
+    enum class AnalysisType {
+        WorstMoves,
+        PlayerStyle,
+        FullReport
+    };
+    AnalysisType d_selectedAnalysisType = AnalysisType::FullReport;
+
     struct AnalysisMove {
         int turn;
         std::string fen;
         std::string comment;
     };
+    struct PlayerStyle {
+        std::string player;
+        std::string comment;
+    };
+
     std::vector<AnalysisMove> d_analysisMoves;
+    std::vector<PlayerStyle> d_playerStyles;
     int d_currentAnalysisIndex = 0;
     Button d_nextAnalysisButton{ 600, 700, "SUIVANT" };
     Button d_prevAnalysisButton{ 100, 700, "PRECEDENT" };
     Button d_closeAnalysisButton{ 350, 700, "FERMER" };
+    Button d_viewStyleButton{ 360, 700, "ANALYSE SUIVANTE" };
+    Button d_viewWorstButton{ 210, 700, "Voir les Pires Coup" };
     Board d_analysisBoard;
 
-
+    void startAnalysis(AnalysisType analysisType, bool sequential = false);
+    void startBackgroundAnalysis(AnalysisType analysisType);
+    void parseAnalysisResponse(const std::string& responseText, AnalysisType analysisType);
+    void resetGame();
 
 };

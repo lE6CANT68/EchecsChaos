@@ -14,6 +14,10 @@ public:
     void setPosition(float x, float y);
     float getWidth() const;
     float getHeight() const;
+    void setSize(float w, float h);
+    void setText(const std::string& text);
+    float getTextWidth() const;
+    float getPreferredWidth() const;
 
 private:
     static constexpr int FONT_SIZE = 20;
